@@ -14,6 +14,8 @@ interface ScenarioSimulatorProps {
   setExpectedReturn: (v: number[]) => void;
   lifeExpectancy: number[];
   setLifeExpectancy: (v: number[]) => void;
+  targetPension: number[]; // NEU
+  setTargetPension: (v: number[]) => void; // NEU
   dynamicSavings: boolean;
   setDynamicSavings: (v: boolean) => void;
   projectedMonthly: number;
@@ -33,12 +35,13 @@ export function ScenarioSimulator({
   setExpectedReturn,
   lifeExpectancy,
   setLifeExpectancy,
+  targetPension,
+  setTargetPension,
   dynamicSavings,
   setDynamicSavings,
   projectedMonthly,
   diff,
   isPositive,
-  yearsLeft,
 }: ScenarioSimulatorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -50,10 +53,10 @@ export function ScenarioSimulator({
       >
         <div className="text-left">
           <p className="text-[11px] font-semibold tracking-widest uppercase text-[#6b6b6b] mb-1 group-hover:text-white transition-colors">
-            Adjust Scenarios
+            Szenarien anpassen
           </p>
           <p className="text-[13px] text-[#4a4a4a]">
-            {isOpen ? "Hide advanced settings" : "See how changes affect your projection"}
+            {isOpen ? "Erweiterte Einstellungen ausblenden" : "Passe deine Parameter an und sieh die Effekte"}
           </p>
         </div>
         <div className={`transition-transform duration-300 text-[#4a4a4a] ${isOpen ? "rotate-180 text-[#00e676]" : ""}`}>
@@ -61,14 +64,26 @@ export function ScenarioSimulator({
         </div>
       </button>
 
-      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? "max-h-[800px] opacity-100 mt-8" : "max-h-0 opacity-0"}`}>
+      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? "max-h-[1000px] opacity-100 mt-8" : "max-h-0 opacity-0"}`}>
         <div className="flex flex-col gap-8 pb-4">
           
-          {/* Mtl. Sparrate & Dynamik */}
+          {/* Mtl. Wunschrente (NEU) */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[13px] text-[#9a9a9a] font-medium uppercase tracking-widest">
+                Wunschrente (Kaufkraft)
+              </span>
+              <span className="text-xl font-extrabold text-white">
+                € {targetPension[0]}
+              </span>
+            </div>
+            <Slider value={targetPension} max={5000} min={1000} step={100} onValueChange={setTargetPension} className="w-full" />
+          </div>
+
           <div className="space-y-4 bg-white/5 p-4 rounded-xl border border-white/10">
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-[#00e676] font-semibold uppercase tracking-widest">
-                Mtl. Sparrate (ETF)
+                Monatl. Sparrate (ETF)
               </span>
               <span className="text-xl font-extrabold text-white">
                 € {monthlyContribution[0]}
@@ -79,17 +94,16 @@ export function ScenarioSimulator({
             <div className="pt-2 flex items-center justify-between border-t border-white/10 mt-2">
               <div className="flex items-center gap-2">
                 <TrendingUp size={14} className="text-[#9a9a9a]" />
-                <span className="text-[12px] text-[#9a9a9a] font-medium">Dynamic Increase (2% p.a.)</span>
+                <span className="text-[12px] text-[#9a9a9a] font-medium">Dynamische Erhöhung (2% p.a.)</span>
               </div>
               <Switch checked={dynamicSavings} onCheckedChange={setDynamicSavings} className="data-[state=checked]:bg-[#00e676]" />
             </div>
           </div>
 
-          {/* Expected Return */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-[#9a9a9a] font-medium uppercase tracking-widest">
-                Annual Return (ETF)
+                Jährliche Rendite (ETF)
               </span>
               <span className="text-xl font-extrabold text-white">
                 {expectedReturn[0].toFixed(1)}%
@@ -98,11 +112,10 @@ export function ScenarioSimulator({
             <Slider value={expectedReturn} max={12.0} min={2.0} step={0.1} onValueChange={setExpectedReturn} className="w-full" />
           </div>
 
-          {/* Retirement Age */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-[#9a9a9a] font-medium uppercase tracking-widest">
-                Retirement Age
+                Renteneintrittsalter
               </span>
               <span className="text-xl font-extrabold text-white">
                 {retirementAge[0]}
@@ -111,11 +124,10 @@ export function ScenarioSimulator({
             <Slider value={retirementAge} max={72} min={60} step={1} onValueChange={setRetirementAge} className="w-full" />
           </div>
 
-          {/* NEU: Life Expectancy */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-[#9a9a9a] font-medium uppercase tracking-widest">
-                Life Expectancy
+                Lebenserwartung
               </span>
               <span className="text-xl font-extrabold text-white">
                 {lifeExpectancy[0]}
@@ -124,11 +136,10 @@ export function ScenarioSimulator({
             <Slider value={lifeExpectancy} max={105} min={75} step={1} onValueChange={setLifeExpectancy} className="w-full" />
           </div>
 
-          {/* Inflation */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-[13px] text-[#9a9a9a] font-medium uppercase tracking-widest">
-                Inflation Rate
+                Inflationsrate
               </span>
               <span className="text-xl font-extrabold text-white">
                 {inflation[0].toFixed(1)}%
@@ -141,12 +152,12 @@ export function ScenarioSimulator({
 
       <div className="mt-6 p-5 bg-[#0a0a0a] border border-white/10 rounded-xl">
         <p className="text-[11px] text-[#6b6b6b] font-semibold tracking-widest uppercase mb-3.5">
-          Scenario Impact
+          Auswirkungen des Szenarios
         </p>
         <div className="flex flex-col gap-3">
           {[
-            { label: "Real purchasing power", value: `€ ${projectedMonthly.toLocaleString("de-DE")} / mo`, color: isPositive ? "text-[#00e676]" : "text-red-500" },
-            { label: "Gap to target", value: `${isPositive ? "+" : ""}€ ${Math.abs(diff).toLocaleString("de-DE")}`, color: isPositive ? "text-[#00e676]" : "text-red-500" },
+            { label: "Reale Kaufkraft", value: `€ ${projectedMonthly.toLocaleString("de-DE")} / Monat`, color: isPositive ? "text-[#00e676]" : "text-red-500" },
+            { label: "Lücke zur Wunschrente", value: `${isPositive ? "+" : ""}€ ${Math.abs(diff).toLocaleString("de-DE")}`, color: isPositive ? "text-[#00e676]" : "text-red-500" },
           ].map((row) => (
             <div key={row.label} className="flex justify-between items-center">
               <span className="text-[13px] text-[#6b6b6b]">{row.label}</span>

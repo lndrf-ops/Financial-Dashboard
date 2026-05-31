@@ -6,7 +6,6 @@ interface OptimizationPlanProps {
   targetPension: number;
   diff: number;
   
-  // NEU: States für die interaktiven Actions
   monthlyContribution: number;
   setMonthlyContribution: (val: number) => void;
   expectedReturn: number;
@@ -26,14 +25,13 @@ export function OptimizationPlan({
   
   const isPositive = diff >= 0;
 
-  // --- ACTION HANDLER ---
   const handleBoostETF = () => {
-    setMonthlyContribution(monthlyContribution + 50); // Erhöht die Rate um 50€
-    onBack(); // Springt sofort zurück zum Dashboard, um den Effekt zu zeigen!
+    setMonthlyContribution(monthlyContribution + 50); 
+    onBack(); 
   };
 
   const handleRebalance = () => {
-    setExpectedReturn(7.5); // Setzt die erwartete Rendite auf 7.5%
+    setExpectedReturn(7.5); 
     onBack();
   };
 
@@ -45,22 +43,22 @@ export function OptimizationPlan({
         <button onClick={onBack} className="p-2 -ml-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
           <ArrowLeft size={20} className="text-white" />
         </button>
-        <span className="font-extrabold text-[17px] tracking-tight">Smart Action Plan</span>
+        <span className="font-extrabold text-[17px] tracking-tight">Smarter Aktionsplan</span>
       </div>
 
       <div className="px-6 pt-8 pb-6">
         <p className="text-[11px] font-semibold tracking-widest uppercase text-[#6b6b6b] mb-2">
-          Your Optimization Status
+          Dein Optimierungsstatus
         </p>
         <div className="flex items-end gap-3 mb-6">
           <div className="text-4xl font-black tracking-tight leading-none text-white">
-            {isPositive ? "On Track" : "Action Needed"}
+            {isPositive ? "Auf Kurs" : "Handlungsbedarf"}
           </div>
         </div>
         <p className="text-[13px] text-[#9a9a9a] leading-relaxed">
           {isPositive 
-            ? `Excellent! You are projected to exceed your target of €${targetPension.toLocaleString("de-DE")} by €${diff.toLocaleString("de-DE")}. Here are ways to optimize your surplus or retire even earlier.`
-            : `You have a gap of €${Math.abs(diff).toLocaleString("de-DE")} to reach your monthly target of €${targetPension.toLocaleString("de-DE")}. Apply these data-driven recommendations to close it.`}
+            ? `Hervorragend! Du wirst dein Ziel von ${targetPension.toLocaleString("de-DE")} € voraussichtlich um ${diff.toLocaleString("de-DE")} € übertreffen. Hier sind Wege, deinen Überschuss zu optimieren oder früher in Rente zu gehen.`
+            : `Dir fehlen noch ${Math.abs(diff).toLocaleString("de-DE")} €, um deine monatliche Wunschrente von ${targetPension.toLocaleString("de-DE")} € zu erreichen. Nutze diese datengetriebenen Empfehlungen, um die Lücke zu schließen.`}
         </p>
       </div>
 
@@ -72,15 +70,15 @@ export function OptimizationPlan({
               <Zap size={20} className="text-[#00e676]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-[15px] font-bold text-white mb-1">Boost ETF Contribution</h3>
+              <h3 className="text-[15px] font-bold text-white mb-1">ETF-Sparrate erhöhen</h3>
               <p className="text-[12px] text-[#6b6b6b] mb-4 leading-relaxed">
-                Increasing your monthly rate by just <span className="text-white font-semibold">€50</span> will utilize compound interest to add approx. <span className="text-[#00e676] font-bold">€180/mo</span> to your retirement payout.
+                Eine Erhöhung deiner monatlichen Sparrate um nur <span className="text-white font-semibold">50 €</span> bringt dir durch den Zinseszinseffekt ca. <span className="text-[#00e676] font-bold">180 € mehr</span> monatliche Auszahlung in der Rente.
               </p>
               <button 
                 onClick={handleBoostETF}
                 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-[#00e676] group-hover:translate-x-1 transition-transform cursor-pointer"
               >
-                Apply Action <ArrowRight size={14} strokeWidth={2.5} />
+                Aktion anwenden <ArrowRight size={14} strokeWidth={2.5} />
               </button>
             </div>
           </div>
@@ -93,15 +91,15 @@ export function OptimizationPlan({
               <PieChart size={20} className="text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-[15px] font-bold text-white mb-1">Rebalance Portfolio Risk</h3>
+              <h3 className="text-[15px] font-bold text-white mb-1">Portfolio-Risiko anpassen</h3>
               <p className="text-[12px] text-[#6b6b6b] mb-4 leading-relaxed">
-                Based on your 30 years left to retirement, your risk profile is currently too conservative. Shift 15% from bonds to global equities to reach a <span className="text-white font-semibold">7.5% expected return</span>.
+                Angesichts deiner verbleibenden Ansparzeit ist dein Risikoprofil aktuell zu konservativ. Schichte 15 % von Anleihen in globale Aktien um, um eine <span className="text-white font-semibold">erwartete Rendite von 7,5 %</span> zu erreichen.
               </p>
               <button 
                 onClick={handleRebalance}
                 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white group-hover:translate-x-1 transition-transform cursor-pointer"
               >
-                Review Allocation <ArrowRight size={14} strokeWidth={2.5} />
+                Allokation prüfen <ArrowRight size={14} strokeWidth={2.5} />
               </button>
             </div>
           </div>
@@ -114,15 +112,15 @@ export function OptimizationPlan({
               <ShieldCheck size={20} className="text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-[15px] font-bold text-white mb-1">Voluntary DRV Payments</h3>
+              <h3 className="text-[15px] font-bold text-white mb-1">Freiwillige DRV-Zahlungen</h3>
               <p className="text-[12px] text-[#6b6b6b] mb-4 leading-relaxed">
-                Since you plan to retire at 67, you can make voluntary tax-deductible contributions to the statutory pension starting at age 50 to maximize your base payout.
+                Da du planst, regulär in Rente zu gehen, kannst du ab Alter 50 freiwillige, steuerlich absetzbare Einzahlungen in die gesetzliche Rente leisten, um deine Basisrente zu maximieren.
               </p>
               <button 
-                onClick={() => alert("This would open an information modal about DRV payments.")}
+                onClick={() => alert("Dieses Modul würde weiterführende Informationen zu freiwilligen Zahlungen an die DRV öffnen.")}
                 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white group-hover:translate-x-1 transition-transform cursor-pointer"
               >
-                Learn More <ArrowRight size={14} strokeWidth={2.5} />
+                Mehr erfahren <ArrowRight size={14} strokeWidth={2.5} />
               </button>
             </div>
           </div>
