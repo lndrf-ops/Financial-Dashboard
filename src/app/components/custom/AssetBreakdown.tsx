@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, X } from "lucide-react";
-import { Switch } from "../ui/switch";
+import { ChevronRight, X, Plus } from "lucide-react";
 
 export interface Asset {
   id: string;
@@ -13,17 +12,20 @@ export interface Asset {
 }
 
 interface AssetBreakdownProps {
-  isNetto: boolean;
-  setIsNetto: (val: boolean) => void;
   assets: Asset[];
   onUpdateAsset: (id: string, payout: number, accumulatedValue: number) => void;
   combinedMonthlyNominal: number;
 }
 
-export function AssetBreakdown({ isNetto, setIsNetto, assets, onUpdateAsset, combinedMonthlyNominal }: AssetBreakdownProps) {
+export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }: AssetBreakdownProps) {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [inputPayout, setInputPayout] = useState("");
   const [inputAccumulated, setInputAccumulated] = useState("");
+  const [showAddMenu, setShowAddMenu] = useState(false);
+
+  // UX Logik: Gesetzliche Rente & ETF immer zeigen, den Rest nur wenn Kapital > 0
+  const visibleAssets = assets.filter(a => a.id === 'statutory' || a.id === 'etf' || a.payout > 0 || a.accumulatedValue > 0);
+  const hiddenAssets = assets.filter(a => !visibleAssets.includes(a));
 
   const handleRowClick = (asset: Asset) => {
     setEditingAsset(asset);
@@ -51,18 +53,10 @@ export function AssetBreakdown({ isNetto, setIsNetto, assets, onUpdateAsset, com
           <p className="text-[11px] font-semibold tracking-widest uppercase text-[#6b6b6b] mb-1">Vermögensaufteilung</p>
           <p className="text-[13px] text-[#4a4a4a]">Klicke auf ein Asset zum Bearbeiten</p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/10">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${!isNetto ? "text-white" : "text-[#6b6b6b]"}`}>Brutto</span>
-            <Switch checked={isNetto} onCheckedChange={setIsNetto} className="scale-75 data-[state=checked]:bg-[#00e676]" />
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isNetto ? "text-[#00e676]" : "text-[#6b6b6b]"}`}>Netto</span>
-          </div>
-        </div>
       </div>
 
       <div className="mx-6 border border-white/10 rounded-xl overflow-hidden bg-[#0a0a0a]">
-        {assets.map((asset, i) => {
+        {visibleAssets.map((asset, i) => {
           const Icon = asset.icon;
           const isCalculated = calculatedAssets.includes(asset.id);
           
@@ -70,7 +64,7 @@ export function AssetBreakdown({ isNetto, setIsNetto, assets, onUpdateAsset, com
             <div 
               key={asset.id} 
               onClick={() => handleRowClick(asset)}
-              className={`flex items-center p-4 cursor-pointer hover:bg-white/5 transition-colors ${i < assets.length - 1 ? "border-b border-white/5" : ""}`}
+              className={`flex items-center p-4 cursor-pointer hover:bg-white/5 transition-colors ${i < visibleAssets.length - 1 ? "border-b border-white/5" : ""}`}
             >
               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0 mr-3.5">
                 <Icon size={18} className="text-[#9a9a9a]" strokeWidth={1.75} />
@@ -93,7 +87,39 @@ export function AssetBreakdown({ isNetto, setIsNetto, assets, onUpdateAsset, com
         })}
       </div>
 
-      <div className="mx-6 mt-3 px-5 py-4 bg-[#00e676]/5 border border-[#00e676]/15 rounded-xl flex items-center justify-between">
+      {/* NEU: Das dynamische "Plus"-Menü für ungenutzte Assets */}
+      {hiddenAssets.length > 0 && (
+        <>
+          <button 
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            className="mx-6 mt-3 flex items-center justify-center gap-2 w-[calc(100%-48px)] py-3 border border-dashed border-white/10 hover:border-white/30 rounded-xl text-zinc-500 hover:text-white transition-colors cursor-pointer"
+          >
+            <Plus size={16} /> <span className="text-[13px] font-bold">Neues Asset hinzufügen</span>
+          </button>
+
+          {showAddMenu && (
+            <div className="mx-6 mt-2 p-2 bg-[#0a0a0a] border border-white/10 rounded-xl animate-in fade-in slide-in-from-top-2">
+              {hiddenAssets.map(a => (
+                <div
+                  key={a.id}
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    handleRowClick(a);
+                  }}
+                  className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <a.icon size={14} className="text-zinc-400" />
+                  </div>
+                  <span className="text-sm font-bold text-white">{a.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="mx-6 mt-4 px-5 py-4 bg-[#00e676]/5 border border-[#00e676]/15 rounded-xl flex items-center justify-between">
         <span className="text-[13px] text-[#9a9a9a] font-medium">Aktuelle Basisrente (Nominal)</span>
         <span className="text-xl font-black text-[#00e676] tracking-tight">
           € {combinedMonthlyNominal.toLocaleString("de-DE", { minimumFractionDigits: 2 })}

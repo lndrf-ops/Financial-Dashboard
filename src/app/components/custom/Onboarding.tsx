@@ -1,4 +1,4 @@
-import { UploadCloud, User, GraduationCap, Briefcase, FileText } from "lucide-react";
+import { UploadCloud, User, GraduationCap, Briefcase, FileText, Bot } from "lucide-react";
 
 export interface Persona {
   id: string;
@@ -6,7 +6,7 @@ export interface Persona {
   role: string;
   age: number;
   targetAge: number;
-  targetPension: number; // NEU: Individuelle Wunschrente pro Persona
+  targetPension: number;
   monthlySavings: number;
   assets: {
     statutoryPayout: number;
@@ -24,7 +24,7 @@ export interface Persona {
 const personas: Persona[] = [
   {
     id: "p1",
-    name: "John", // NEU: Name geändert
+    name: "John",
     role: "Data Science Student & Werkstudent",
     age: 25,
     targetAge: 67,
@@ -71,7 +71,7 @@ const personas: Persona[] = [
     targetPension: 2800,
     monthlySavings: 200,
     assets: {
-      statutoryPayout: 1650, // Etwas realistischer angepasst
+      statutoryPayout: 1650, 
       statutoryAcc: 210000,
       etfAcc: 18000, 
       companyPayout: 350, 
@@ -86,12 +86,24 @@ const personas: Persona[] = [
 
 interface OnboardingProps {
   onSelectPersona: (persona: Persona) => void;
+  onSwitchToAI: () => void; // NEU
 }
 
-export function Onboarding({ onSelectPersona }: OnboardingProps) {
+export function Onboarding({ onSelectPersona, onSwitchToAI }: OnboardingProps) {
   return (
-    <div className="bg-black min-h-screen text-white max-w-[430px] mx-auto font-sans flex flex-col px-6 py-12">
+    <div className="bg-black min-h-screen text-white max-w-[430px] mx-auto font-sans flex flex-col px-6 py-12 relative">
       
+      {/* Toggle Button Oben Rechts */}
+      <div className="absolute top-6 right-6 z-10">
+        <button 
+          onClick={onSwitchToAI}
+          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3 py-1.5 transition-colors cursor-pointer"
+        >
+          <Bot size={14} className="text-[#00e676]" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300">KI-Setup</span>
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col justify-center">
         <div className="w-16 h-16 bg-[#00e676]/10 rounded-2xl flex items-center justify-center mb-6 border border-[#00e676]/20">
           <UploadCloud size={32} className="text-[#00e676]" strokeWidth={2} />
@@ -102,7 +114,7 @@ export function Onboarding({ onSelectPersona }: OnboardingProps) {
           <span className="text-[#00e676]">Altersvorsorge.</span>
         </h1>
         <p className="text-[15px] text-[#9a9a9a] leading-relaxed mb-10">
-          Lade einfach deine offizielle Renteninformation hoch. Unsere KI extrahiert alle relevanten Daten für dich.
+          Wähle ein vorbereitetes Demo-Profil, um die Auswirkung verschiedener Lebenssituationen zu testen.
         </p>
 
         <div className="mb-6 flex items-center gap-3">
