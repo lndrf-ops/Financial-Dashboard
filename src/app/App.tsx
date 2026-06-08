@@ -127,7 +127,6 @@ export default function App() {
     }));
   };
 
-  // NEU: Diese Funktion verarbeitet den KI-Scan der DRV/bAV PDFs und aktualisiert das Dashboard
   const handleDataSync = (payout: number, accumulated: number, type: 'drv' | 'bav') => {
     setDynamicAssets(prev => prev.map(asset => {
       if (type === 'drv' && asset.id === 'statutory') {
@@ -249,7 +248,6 @@ export default function App() {
   const combinedMonthlyNominal = statutoryValue + companyValue + realEstatePayout + additionalMonthlyPayoutNominal;
   const totalNetWorthAtRetirement = capitalAtRetirement + realEstateAcc;
 
-  // Automatischer Erfolgs-Toast bei Lückenschließung!
   useEffect(() => {
     if (isPositive && !hasShownSuccessToast && activeView === 'dashboard') {
       setNotification("Glückwunsch! Deine Rentenlücke ist geschlossen. 🎯");
@@ -348,7 +346,10 @@ export default function App() {
             </p>
             <div className="text-[44px] font-black tracking-tight leading-none text-white mb-2 flex flex-wrap items-baseline gap-2 transition-all duration-300">
               € {realPurchasingPowerMonthly.toLocaleString("de-DE")}
-              <span className="text-[22px] font-semibold text-[#00e676]">/ Monat</span>
+              {/* UX UPDATE: Dynamische Farbe für "/ Monat" je nach Lücke */}
+              <span className={`text-[22px] font-semibold transition-colors duration-500 ${isPositive ? 'text-[#00e676]' : 'text-red-500'}`}>
+                / Monat
+              </span>
             </div>
             <p className="text-[13px] font-medium text-zinc-400 mb-5">
               Nominale Auszahlung mit {retirementAge[0]}: <span className="text-white font-semibold">€ {Math.round(totalNominalMonthly).toLocaleString("de-DE")}</span>
@@ -376,7 +377,6 @@ export default function App() {
                   <ReferenceLine y={0} stroke="#4a4a4a" strokeDasharray="3 3" />
                   <ReferenceLine x={retirementAge[0]} stroke="#00e676" strokeOpacity={0.3} strokeDasharray="3 3" /> 
                   
-                  {/* Gestapelter Chart für Cash und Depot */}
                   <defs>
                     <linearGradient id="colorDepot" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#00e676" stopOpacity={0.6}/>
