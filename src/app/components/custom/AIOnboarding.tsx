@@ -1,12 +1,19 @@
-import { useState } from "react";
-import { ArrowRight, Bot, Check, Users } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Bot, User, ArrowRight, UploadCloud, FileText, CheckCircle2, Loader2 } from "lucide-react";
 
 export interface AIOnboardingData {
   age: number;
-  income: number; // NEU: Zur Schätzung der DRV
-  initialCapital: number;
   monthlySavings: number;
-  targetPension: number; // NEU: Für den Ziel-Graphen
+  targetPension: number;
+  initialCapital: number;
+  income: number;
+  drvNetto: number; // NEU: Direktes Netto aus dem PDF
+}
+
+interface Message {
+  id: string;
+  sender: 'ai' | 'user';
+  text: string | React.ReactNode;
 }
 
 interface AIOnboardingProps {
@@ -15,271 +22,162 @@ interface AIOnboardingProps {
 }
 
 export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingProps) {
-  const [step, setStep] = useState(0);
-  const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', sender: 'ai', text: "Hey! Ich bin FutureMe. Schön, dass du deine Altersvorsorge anpackst. Lass uns das in 2 Minuten klären. Wie alt bist du?" }
+  ]);
+  const [step, setStep] = useState(1);
+  const [inputValue, setInputValue] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   
-  const [age, setAge] = useState<string>("");
-  const [income, setIncome] = useState<string>("");
-  const [initialCapital, setInitialCapital] = useState<string>("");
-  const [monthlySavings, setMonthlySavings] = useState<string>("");
-  const [targetPension, setTargetPension] = useState<string>("");
+  // Gesammelte Daten
+  const [age, setAge] = useState(30);
+  const [drvNetto, setDrvNetto] = useState(0);
+  const [monthlySavings, setMonthlySavings] = useState(150);
 
-  const nextStep = () => {
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      setStep((prev) => prev + 1);
-    }, 800); 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleFinish = () => {
-    setIsTyping(true);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isUploading]);
+
+  const handleSend = () => {
+    if (!inputValue.trim()) return;
+
+    const newUserMsg: Message = { id: Date.now().toString(), sender: 'user', text: inputValue };
+    setMessages(prev => [...prev, newUserMsg]);
+    setInputValue("");
+
     setTimeout(() => {
-      onComplete({
-        age: parseInt(age) || 30,
-        income: parseInt(income) || 0,
-        initialCapital: parseInt(initialCapital) || 0,
-        monthlySavings: parseInt(monthlySavings) || 0,
-        targetPension: parseInt(targetPension) || 2000,
-      });
-    }, 1200);
+      if (step === 1) {
+        setAge(parseInt(inputValue) || 30);
+        setMessages(prev => [...prev, { 
+          id: Date.now().toString(), 
+          sender: 'ai', 
+          text: (
+            <div className="flex flex-col gap-3">
+              <p>Super, {inputValue} Jahre jung! Um deine gesetzliche Rente punktgenau zu berechnen, brauche ich deine Renteninformation. Lade einfach das PDF der DRV hoch – ich lese die Daten aus und berechne direkt deine echten Netto-Abzüge.</p>
+              <button 
+                onClick={handleUploadMock}
+                className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 border border-indigo-500/30 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-colors w-full mt-2"
+              >
+                <UploadCloud size={18} /> Renten-PDF hochladen
+              </button>
+            </div>
+          ) 
+        }]);
+        setStep(2);
+      } else if (step === 3) {
+        setMonthlySavings(parseInt(inputValue) || 150);
+        setMessages(prev => [...prev, { 
+          id: Date.now().toString(), 
+          sender: 'ai', 
+          text: "Perfekt! Ich habe alles, was ich brauche. Ich bereite jetzt deinen persönlichen Aktionsplan vor..." 
+        }]);
+        
+        setTimeout(() => {
+          onComplete({
+            age: age,
+            monthlySavings: parseInt(inputValue) || 150,
+            targetPension: 2200,
+            initialCapital: 5000,
+            income: 3000,
+            drvNetto: drvNetto || 1450 // Fallback falls kein Upload
+          });
+        }, 1500);
+      }
+    }, 600);
+  };
+
+  const handleUploadMock = () => {
+    setIsUploading(true);
+    setMessages(prev => [...prev, { 
+      id: Date.now().toString(), sender: 'user', text: <span className="flex items-center gap-2"><FileText size={16}/> Renteninformation_2025.pdf</span> 
+    }]);
+
+    // Simuliere den KI-Scan
+    setTimeout(() => {
+      setIsUploading(false);
+      const calculatedNetto = 1450;
+      setDrvNetto(calculatedNetto);
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), 
+        sender: 'ai', 
+        text: `Wahnsinn, das ging schnell! Ich habe 45 Entgeltpunkte extrahiert. Nach Abzug von Steuern und KV/PV bleiben dir ca. € ${calculatedNetto.toLocaleString("de-DE")} echte Netto-Rente.` 
+      }]);
+      
+      setTimeout(() => {
+        setMessages(prev => [...prev, { 
+          id: Date.now().toString(), 
+          sender: 'ai', 
+          text: "Letzte Frage: Wie viel Euro sparst du aktuell ca. pro Monat (z.B. in ETFs oder auf dem Tagesgeld)?" 
+        }]);
+        setStep(3);
+      }, 1000);
+    }, 2500);
   };
 
   return (
-    <div className="bg-black min-h-screen text-white max-w-[430px] mx-auto font-sans flex flex-col relative">
+    <div className="bg-slate-950 min-h-screen flex flex-col text-slate-200 max-w-[430px] mx-auto font-sans relative">
       
-      {/* Toggle Button Oben Rechts */}
-      <div className="absolute top-6 right-6 z-10">
-        <button 
-          onClick={onSwitchToPersonas}
-          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3 py-1.5 transition-colors cursor-pointer"
-        >
-          <Users size={14} className="text-zinc-400" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300">Personas</span>
+      <div className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center justify-between">
+        <span className="font-extrabold text-[17px] tracking-tight text-white">FutureMe AI</span>
+        <button onClick={onSwitchToPersonas} className="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-3 py-1.5 rounded-full">
+          Demo überspringen
         </button>
       </div>
 
-      <div className="pt-12 px-6 pb-6">
-        <div className="w-12 h-12 bg-[#00e676]/10 rounded-2xl flex items-center justify-center mb-6 border border-[#00e676]/20">
-          <Bot size={24} className="text-[#00e676]" />
-        </div>
-        <h1 className="text-3xl font-black tracking-tight leading-tight mb-2">
-          FutureMe <span className="text-[#00e676]">AI</span>
-        </h1>
-        <p className="text-[13px] text-[#9a9a9a]">
-          Lass uns deine Altersvorsorge in wenigen Sekunden aufsetzen.
-        </p>
-      </div>
-
-      <div className="flex-1 px-6 space-y-6 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 pb-32">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-in fade-in slide-in-from-bottom-2`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.sender === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-indigo-400'}`}>
+              {msg.sender === 'user' ? <User size={16} /> : <Bot size={16} />}
+            </div>
+            <div className={`p-4 rounded-2xl text-[14px] leading-relaxed max-w-[85%] shadow-sm ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-none'}`}>
+              {msg.text}
+            </div>
+          </div>
+        ))}
         
-        {/* Step 0: Alter */}
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl rounded-tl-sm p-4 inline-block max-w-[90%]">
-            <p className="text-sm leading-relaxed">
-              Hallo! Um dein Dashboard perfekt zu kalibrieren, brauche ich ein paar schnelle Eckdaten. <br/><br/>
-              <span className="font-bold text-[#00e676]">Wie alt bist du aktuell?</span>
-            </p>
-          </div>
-          
-          {step === 0 && !isTyping && (
-            <div className="mt-4 flex items-center gap-3 animate-in fade-in">
-              <input 
-                type="number" 
-                placeholder="z.B. 25" 
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                autoFocus
-                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00e676] w-24 text-center font-bold"
-              />
-              <button 
-                onClick={nextStep}
-                disabled={!age}
-                className="w-12 h-12 bg-[#00e676] rounded-xl flex items-center justify-center text-black disabled:opacity-50 disabled:cursor-not-allowed transition-opacity cursor-pointer"
-              >
-                <ArrowRight size={20} strokeWidth={2.5} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Step 1: Einkommen */}
-        {step >= 1 && (
-          <>
-            <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2">
-              <div className="bg-[#00e676]/10 text-[#00e676] border border-[#00e676]/20 rounded-2xl rounded-tr-sm p-3 inline-block">
-                <p className="text-sm font-bold">{age} Jahre</p>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl rounded-tl-sm p-4 inline-block max-w-[90%]">
-                <p className="text-sm leading-relaxed">
-                  Okay. Um deine gesetzliche Rente zu schätzen, <span className="font-bold text-[#00e676]">wie hoch ist dein aktuelles monatliches Nettoeinkommen?</span>
-                </p>
-              </div>
-              
-              {step === 1 && !isTyping && (
-                <div className="mt-4 flex items-center gap-3 animate-in fade-in">
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-zinc-500 font-bold">€</span>
-                    <input 
-                      type="number" 
-                      placeholder="2500" 
-                      value={income}
-                      onChange={(e) => setIncome(e.target.value)}
-                      autoFocus
-                      className="bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white focus:outline-none focus:border-[#00e676] w-32 font-bold"
-                    />
-                  </div>
-                  <button 
-                    onClick={nextStep}
-                    disabled={!income}
-                    className="w-12 h-12 bg-[#00e676] rounded-xl flex items-center justify-center text-black disabled:opacity-50 transition-opacity cursor-pointer"
-                  >
-                    <ArrowRight size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Step 2: Startkapital */}
-        {step >= 2 && (
-          <>
-            <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2">
-              <div className="bg-[#00e676]/10 text-[#00e676] border border-[#00e676]/20 rounded-2xl rounded-tr-sm p-3 inline-block">
-                <p className="text-sm font-bold">€ {income}</p>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl rounded-tl-sm p-4 inline-block max-w-[90%]">
-                <p className="text-sm leading-relaxed">
-                  Verstanden. <span className="font-bold text-[#00e676]">Wie viel liquides Kapital hast du bereits angespart?</span> (Depotwert + Tagesgeld)
-                </p>
-              </div>
-              
-              {step === 2 && !isTyping && (
-                <div className="mt-4 flex items-center gap-3 animate-in fade-in">
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-zinc-500 font-bold">€</span>
-                    <input 
-                      type="number" 
-                      placeholder="10000" 
-                      value={initialCapital}
-                      onChange={(e) => setInitialCapital(e.target.value)}
-                      autoFocus
-                      className="bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white focus:outline-none focus:border-[#00e676] w-36 font-bold"
-                    />
-                  </div>
-                  <button 
-                    onClick={nextStep}
-                    disabled={!initialCapital}
-                    className="w-12 h-12 bg-[#00e676] rounded-xl flex items-center justify-center text-black disabled:opacity-50 transition-opacity cursor-pointer"
-                  >
-                    <ArrowRight size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Step 3: Sparrate */}
-        {step >= 3 && (
-          <>
-            <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2">
-              <div className="bg-[#00e676]/10 text-[#00e676] border border-[#00e676]/20 rounded-2xl rounded-tr-sm p-3 inline-block">
-                <p className="text-sm font-bold">€ {initialCapital}</p>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl rounded-tl-sm p-4 inline-block max-w-[90%]">
-                <p className="text-sm leading-relaxed">
-                  Guter Start! <span className="font-bold text-[#00e676]">Wie viel legst du davon aktuell jeden Monat zur Seite?</span>
-                </p>
-              </div>
-              
-              {step === 3 && !isTyping && (
-                <div className="mt-4 flex items-center gap-3 animate-in fade-in">
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-zinc-500 font-bold">€</span>
-                    <input 
-                      type="number" 
-                      placeholder="150" 
-                      value={monthlySavings}
-                      onChange={(e) => setMonthlySavings(e.target.value)}
-                      autoFocus
-                      className="bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white focus:outline-none focus:border-[#00e676] w-32 font-bold"
-                    />
-                  </div>
-                  <button 
-                    onClick={nextStep}
-                    disabled={!monthlySavings}
-                    className="w-12 h-12 bg-[#00e676] rounded-xl flex items-center justify-center text-black disabled:opacity-50 transition-opacity cursor-pointer"
-                  >
-                    <ArrowRight size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Step 4: Wunschrente */}
-        {step >= 4 && (
-          <>
-            <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2">
-              <div className="bg-[#00e676]/10 text-[#00e676] border border-[#00e676]/20 rounded-2xl rounded-tr-sm p-3 inline-block">
-                <p className="text-sm font-bold">€ {monthlySavings}</p>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl rounded-tl-sm p-4 inline-block max-w-[90%]">
-                <p className="text-sm leading-relaxed">
-                  Letzte Frage: <span className="font-bold text-[#00e676]">Wie hoch ist deine monatliche Wunschrente</span> (in heutiger Kaufkraft)?
-                </p>
-              </div>
-              
-              {step === 4 && !isTyping && (
-                <div className="mt-4 flex items-center gap-3 animate-in fade-in">
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-zinc-500 font-bold">€</span>
-                    <input 
-                      type="number" 
-                      placeholder="2500" 
-                      value={targetPension}
-                      onChange={(e) => setTargetPension(e.target.value)}
-                      autoFocus
-                      className="bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white focus:outline-none focus:border-[#00e676] w-36 font-bold"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleFinish}
-                    disabled={!targetPension}
-                    className="w-12 h-12 bg-[#00e676] rounded-xl flex items-center justify-center text-black disabled:opacity-50 transition-opacity cursor-pointer"
-                  >
-                    <Check size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Typing Indicator */}
-        {isTyping && (
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl rounded-tl-sm p-4 inline-flex items-center gap-1 animate-in fade-in">
-            <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        {isUploading && (
+          <div className="flex gap-3 flex-row animate-in fade-in">
+             <div className="w-8 h-8 rounded-full bg-slate-800 text-indigo-400 flex items-center justify-center shrink-0 mt-1">
+                <Bot size={16} />
+             </div>
+             <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-none max-w-[85%] flex flex-col gap-2">
+                <Loader2 size={18} className="text-indigo-400 animate-spin" />
+                <span className="text-[13px] font-medium animate-pulse text-indigo-300">Entgeltpunkte werden extrahiert und um Steuern bereinigt...</span>
+             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
+
+      {/* Input Area */}
+      <div className="absolute bottom-0 left-0 w-full bg-slate-950/90 backdrop-blur-xl border-t border-white/5 p-4 pb-8">
+        <div className="flex gap-2">
+          <input 
+            type="number" 
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder={step === 1 ? "Dein Alter..." : step === 3 ? "Monatliche Sparrate in €..." : "..."}
+            disabled={step === 2 || isUploading}
+            className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+          />
+          <button 
+            onClick={handleSend}
+            disabled={!inputValue.trim() || step === 2 || isUploading}
+            className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center text-white shrink-0 disabled:opacity-50 transition-colors"
+          >
+            <ArrowRight size={20} />
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -1,29 +1,24 @@
 import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 
-// Falls dein utils-Import anders aussieht, behalte deinen ursprünglichen bei!
-import { cn } from "./utils" 
-
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
 >(({ className, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
-    className={cn(
-      "relative flex w-full touch-none select-none items-center",
-      className
-    )}
+    // HIER: Das cn() wurde durch einen normalen Template-String ersetzt
+    className={`relative flex w-full touch-none select-none items-center cursor-pointer ${className || ""}`}
     {...props}
   >
-    {/* Der graue Hintergrund-Balken */}
-    <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-white/10">
-      {/* Der ausgefüllte, neongrüne Bereich */}
-      <SliderPrimitive.Range className="absolute h-full bg-[#00e676]" />
+    {/* Der Hintergrund (Track) in weichem Schiefergrau */}
+    <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-slate-800">
+      {/* Die gefüllte Leiste (Range) in Indigo */}
+      <SliderPrimitive.Range className="absolute h-full bg-indigo-500" />
     </SliderPrimitive.Track>
     
-    {/* Der runde, neongrüne Anfasser (Thumb) mit schwarzem Rand und Glow */}
-    <SliderPrimitive.Thumb className="block h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-black bg-[#00e676] shadow-[0_0_0_1px_rgba(0,230,118,0.3)] transition-shadow hover:shadow-[0_0_0_4px_rgba(0,230,118,0.2)] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50" />
+    {/* Der Anfasser (Thumb) */}
+    <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-indigo-500 bg-white ring-offset-slate-950 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:scale-110" />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName
