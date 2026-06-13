@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, X, Plus } from "lucide-react";
+import { ChevronRight, ChevronDown, X, Plus, Wallet } from "lucide-react";
 
 export interface Asset { id: string; name: string; subtitle: string; icon: any; payout: number; accumulatedLabel: string; accumulatedValue: number; }
 interface AssetBreakdownProps { assets: Asset[]; onUpdateAsset: (id: string, payout: number, accumulatedValue: number) => void; combinedMonthlyNominal: number; }
@@ -8,6 +8,9 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [inputPayout, setInputPayout] = useState("");
   const [inputAccumulated, setInputAccumulated] = useState("");
+  
+  // NEU: Accordion States
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   const visibleAssets = assets.filter(a => a.id === 'statutory' || a.id === 'etf' || a.payout > 0 || a.accumulatedValue > 0);
@@ -28,64 +31,76 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
 
   return (
     <>
-      <div className="px-6 pt-8 pb-4 flex justify-between items-end">
-        <div>
-          <p className="text-[11px] font-semibold tracking-widest uppercase text-slate-500 mb-1">Vermögensaufteilung</p>
-          <p className="text-[13px] text-slate-400">Klicke auf ein Asset zum Bearbeiten</p>
+      <div className="px-6 mt-4 mb-6">
+        
+        {/* NEU: Der Haupt-Button für das Accordion */}
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)} 
+          className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm cursor-pointer transition-colors hover:bg-slate-800/80"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+              <Wallet size={18} className="text-indigo-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-[11px] font-semibold tracking-widest uppercase text-slate-500 mb-0.5">Basisrente (Nominal)</p>
+              <p className="text-lg font-black text-white">€ {combinedMonthlyNominal.toLocaleString("de-DE", { minimumFractionDigits: 2 })}</p>
+            </div>
+          </div>
+          <ChevronDown size={20} className={`text-slate-500 transition-transform duration-300 ${isExpanded ? "rotate-180 text-indigo-400" : ""}`} />
+        </button>
+
+        {/* NEU: Der aufklappbare Bereich (Accordion Content) */}
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? "max-h-[1000px] opacity-100 mt-3" : "max-h-0 opacity-0"}`}>
+          <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900 shadow-inner">
+            {visibleAssets.map((asset, i) => {
+              const Icon = asset.icon;
+              const isCalculated = calculatedAssets.includes(asset.id);
+              
+              return (
+                <div key={asset.id} onClick={() => handleRowClick(asset)} className={`flex items-center p-4 cursor-pointer hover:bg-slate-800 transition-colors ${i < visibleAssets.length - 1 ? "border-b border-slate-800" : ""}`}>
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 mr-3.5">
+                    <Icon size={18} className="text-slate-400" strokeWidth={1.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white mb-0.5 truncate">{asset.name}</p>
+                    <p className="text-xs text-slate-400">{asset.subtitle}</p>
+                  </div>
+                  <div className="text-right ml-3 shrink-0">
+                    <p className="text-base font-extrabold text-white mb-0.5">
+                      {isCalculated ? "Berechnet" : `€ ${asset.payout.toLocaleString("de-DE", { minimumFractionDigits: 2 })}`}
+                    </p>
+                    <p className="text-[11px] text-slate-400">€ {asset.accumulatedValue.toLocaleString("de-DE")} {asset.accumulatedLabel}</p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500 ml-2.5 shrink-0" />
+                </div>
+              );
+            })}
+          </div>
+
+          {hiddenAssets.length > 0 && (
+            <>
+              <button onClick={() => setShowAddMenu(!showAddMenu)} className="mt-3 flex items-center justify-center gap-2 w-full py-3 border border-dashed border-slate-700 hover:border-slate-500 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <Plus size={16} /> <span className="text-[13px] font-bold">Neues Asset hinzufügen</span>
+              </button>
+              {showAddMenu && (
+                <div className="mt-2 p-2 bg-slate-900 border border-slate-800 rounded-xl animate-in fade-in slide-in-from-top-2">
+                  {hiddenAssets.map(a => (
+                    <div key={a.id} onClick={() => { setShowAddMenu(false); handleRowClick(a); }} className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-lg cursor-pointer transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center"><a.icon size={14} className="text-slate-400" /></div>
+                      <span className="text-sm font-bold text-white">{a.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mx-6 border border-slate-800 rounded-xl overflow-hidden bg-slate-900">
-        {visibleAssets.map((asset, i) => {
-          const Icon = asset.icon;
-          const isCalculated = calculatedAssets.includes(asset.id);
-          
-          return (
-            <div key={asset.id} onClick={() => handleRowClick(asset)} className={`flex items-center p-4 cursor-pointer hover:bg-slate-800 transition-colors ${i < visibleAssets.length - 1 ? "border-b border-slate-800" : ""}`}>
-              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 mr-3.5">
-                <Icon size={18} className="text-slate-400" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white mb-0.5 truncate">{asset.name}</p>
-                <p className="text-xs text-slate-400">{asset.subtitle}</p>
-              </div>
-              <div className="text-right ml-3 shrink-0">
-                <p className="text-base font-extrabold text-white mb-0.5">
-                  {isCalculated ? "Berechnet" : `€ ${asset.payout.toLocaleString("de-DE", { minimumFractionDigits: 2 })}`}
-                </p>
-                <p className="text-[11px] text-slate-400">€ {asset.accumulatedValue.toLocaleString("de-DE")} {asset.accumulatedLabel}</p>
-              </div>
-              <ChevronRight size={14} className="text-slate-500 ml-2.5 shrink-0" />
-            </div>
-          );
-        })}
-      </div>
+      <div className="mx-6 h-px bg-slate-800" />
 
-      {hiddenAssets.length > 0 && (
-        <>
-          <button onClick={() => setShowAddMenu(!showAddMenu)} className="mx-6 mt-3 flex items-center justify-center gap-2 w-[calc(100%-48px)] py-3 border border-dashed border-slate-700 hover:border-slate-500 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer">
-            <Plus size={16} /> <span className="text-[13px] font-bold">Neues Asset hinzufügen</span>
-          </button>
-          {showAddMenu && (
-            <div className="mx-6 mt-2 p-2 bg-slate-900 border border-slate-800 rounded-xl animate-in fade-in slide-in-from-top-2">
-              {hiddenAssets.map(a => (
-                <div key={a.id} onClick={() => { setShowAddMenu(false); handleRowClick(a); }} className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-lg cursor-pointer transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center"><a.icon size={14} className="text-slate-400" /></div>
-                  <span className="text-sm font-bold text-white">{a.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="mx-6 mt-4 px-5 py-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-between">
-        <span className="text-[13px] text-slate-400 font-medium">Aktuelle Basisrente (Nominal)</span>
-        <span className="text-xl font-black text-indigo-400 tracking-tight">€ {combinedMonthlyNominal.toLocaleString("de-DE", { minimumFractionDigits: 2 })}</span>
-      </div>
-
-      <div className="mx-6 mt-9 h-px bg-slate-800" />
-
+      {/* Bearbeiten-Modal */}
       {editingAsset && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 relative shadow-2xl">

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Zap, CalendarClock, PieChart, Bot, CheckCircle2, Briefcase, Landmark } from "lucide-react";
-import { Slider } from "../ui/slider";
+import { ArrowLeft, Zap, PieChart, Bot, CheckCircle2, Briefcase, Landmark, X, Mail, Send } from "lucide-react";
 import { Switch } from "../ui/switch";
 
 interface OptimizationPlanProps {
@@ -17,10 +16,37 @@ export function OptimizationPlan({
 }: OptimizationPlanProps) {
   const isPositive = diff >= 0;
   const [appliedStrategy, setAppliedStrategy] = useState<string | null>(null);
+  const [showHRModal, setShowHRModal] = useState<'vl' | 'bav' | null>(null);
+  const [hrSent, setHRSent] = useState(false);
 
-  const gapMagnitude = Math.abs(diff);
-  // Simuliere einen Vorschlag, der die Lücke realistisch schließt
+  const handleHRSend = () => {
+    setHRSent(false);
+    setTimeout(() => setHRSent(true), 1500);
+  };
+
+  const closeModal = () => { setShowHRModal(null); setHRSent(false); };
+
+  const hrModalContent = {
+    vl: {
+      title: "VL-Antrag senden",
+      recipient: "hr@meinefirma.de",
+      subject: "Antrag auf vermögenswirksame Leistungen",
+      body: "Sehr geehrte Damen und Herren,\n\nhiermit beantrage ich die Gewährung von vermögenswirksamen Leistungen gemäß § 2 VermBG. Ich bitte um Einrichtung der monatlichen Zahlung in Höhe von 40 €.\n\nMit freundlichen Grüßen",
+    },
+    bav: {
+      title: "bAV-Antrag senden",
+      recipient: "hr@meinefirma.de",
+      subject: "Antrag auf Entgeltumwandlung (bAV)",
+      body: `Sehr geehrte Damen und Herren,\n\nhiermit beantrage ich die Einrichtung einer betrieblichen Altersvorsorge via Entgeltumwandlung in Höhe von ${bavNettoVerzicht[0]} € monatlich (Netto-Verzicht).\n\nMit freundlichen Grüßen`,
+    },
+  };
+
+  const gapMagnitude = diff < 0 ? Math.abs(diff) : 0;
   const suggestedSavings = Math.max(25, Math.ceil((gapMagnitude * 0.4) / 25) * 25); 
+  const perfectBavNetto = gapMagnitude === 0 ? 0 : Math.min(250, Math.max(10, Math.ceil((gapMagnitude * 0.4 / 2.1) / 10) * 10));
+
+  // NEU: Kaffee-Übersetzung
+  const coffeesPerDay = Math.max(1, Math.ceil(gapMagnitude / 3.5 / 30));
 
   const applyStrategy = (type: 'save' | 'invest' | 'time') => {
     setAppliedStrategy(type);
@@ -57,15 +83,17 @@ export function OptimizationPlan({
         
         <div className={`p-5 rounded-2xl border mb-2 transition-colors shadow-lg ${isPositive ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
           <div className="flex justify-between items-center">
-            <span className="text-sm font-bold text-white">Dir fehlen monatlich:</span>
+            <span className="text-sm font-bold text-white">{isPositive ? 'Du liegst im Plus:' : 'Dir fehlen monatlich:'}</span>
             <span className={`text-xl font-black ${isPositive ? 'text-indigo-400' : 'text-rose-400'}`}>
               {isPositive ? "+" : ""}€ {Math.abs(diff).toLocaleString("de-DE")}
             </span>
           </div>
           {!isPositive && (
-            <p className="text-xs text-rose-300/80 mt-2 leading-relaxed">
-              Wenn du jetzt nichts tust, musst du im Alter deinen Lebensstandard drastisch einschränken.
-            </p>
+            <div className="mt-3 pt-3 border-t border-rose-500/20">
+              <p className="text-xs text-rose-300/90 leading-relaxed font-medium">
+                💡 Das entspricht dem Verzicht auf ca. <strong>{coffeesPerDay} Kaffee To-Go</strong> pro Tag. Packen wir's an!
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -76,21 +104,28 @@ export function OptimizationPlan({
         </div>
         <div className="space-y-4">
           
-          {/* VL Sparen */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                <Landmark size={20} className="text-amber-400" />
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <Landmark size={20} className="text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-bold text-[14px] text-white">VL-Sparen</p>
+                  <p className="text-[11px] text-slate-400">Bis zu 40€ geschenkt vom Chef</p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-[14px] text-white">VL-Sparen</p>
-                <p className="text-[11px] text-slate-400">Bis zu 40€ geschenkt vom Chef</p>
-              </div>
+              <Switch checked={vlActive} onCheckedChange={(c) => setVlActive(c)} className="data-[state=checked]:bg-indigo-500" />
             </div>
-            <Switch checked={vlActive} onCheckedChange={(c) => setVlActive(c)} className="data-[state=checked]:bg-indigo-500" />
+            {vlActive && (
+              <div className="mt-4 pt-3 border-t border-slate-800 animate-in fade-in">
+                <button onClick={() => setShowHRModal('vl')} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[12px] font-bold rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                  <Mail size={14} /> Antrag direkt an HR senden
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* bAV in simplerer Ansicht */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
              <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -113,7 +148,26 @@ export function OptimizationPlan({
                     <p className="text-lg font-bold text-indigo-400">+ € {bavBruttoInvest}</p>
                  </div>
               </div>
-              <Slider value={bavNettoVerzicht} max={250} min={0} step={10} onValueChange={setBavNettoVerzicht} className="w-full" />
+
+              {bavNettoVerzicht[0] === 0 ? (
+                <button 
+                  onClick={() => setBavNettoVerzicht([perfectBavNetto])}
+                  disabled={isPositive}
+                  className={`w-full py-3 border text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-2 group ${isPositive ? 'bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/30 text-indigo-400 cursor-pointer'}`}
+                >
+                  <Zap size={16} className={isPositive ? 'text-slate-600' : 'text-amber-400 fill-amber-400 group-hover:scale-110 transition-transform'} /> 
+                  {isPositive ? "Optimierung nicht nötig" : `Lücke schließen (${perfectBavNetto} € Netto)`}
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={() => setBavNettoVerzicht([0])} className="w-1/3 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-bold rounded-xl transition-colors flex items-center justify-center cursor-pointer">
+                    <X size={16} />
+                  </button>
+                  <button onClick={() => setShowHRModal('bav')} className="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                    <Mail size={16} /> Bei HR einreichen
+                  </button>
+                </div>
+              )}
           </div>
         </div>
       </div>
@@ -139,7 +193,6 @@ export function OptimizationPlan({
                 </div>
                 <span className={`text-[12px] font-bold ${appliedStrategy === 'save' ? 'text-indigo-100' : 'text-slate-400'}`}>+ {suggestedSavings} € mtl.</span>
               </button>
-              
               <button onClick={() => applyStrategy('invest')} className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${appliedStrategy === 'invest' ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-900 border-slate-800 hover:border-indigo-500/50 text-slate-200'}`}>
                 <div className="flex items-center gap-3">
                   <PieChart size={18} className={appliedStrategy === 'invest' ? 'text-white' : 'text-cyan-400'} />
@@ -147,27 +200,71 @@ export function OptimizationPlan({
                 </div>
                 <span className={`text-[12px] font-bold ${appliedStrategy === 'invest' ? 'text-indigo-100' : 'text-slate-400'}`}>Auf 8.5% p.a.</span>
               </button>
-              
-              <button onClick={() => applyStrategy('time')} className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${appliedStrategy === 'time' ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-900 border-slate-800 hover:border-indigo-500/50 text-slate-200'}`}>
-                <div className="flex items-center gap-3">
-                  <CalendarClock size={18} className={appliedStrategy === 'time' ? 'text-white' : 'text-purple-400'} />
-                  <span className="text-[14px] font-bold">Ich arbeite länger</span>
-                </div>
-                <span className={`text-[12px] font-bold ${appliedStrategy === 'time' ? 'text-indigo-100' : 'text-slate-400'}`}>+ 2 Jahre</span>
-              </button>
             </div>
           </div>
         </div>
       )}
 
       <div className="px-6 mt-4">
-        <button 
-          onClick={onBack} 
-          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer flex justify-center items-center gap-2 shadow-lg shadow-indigo-500/25"
+        <button
+          onClick={onBack}
+          className="w-full font-extrabold text-[15px] py-4 rounded-xl transition-all cursor-pointer flex justify-center items-center gap-2 shadow-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/25"
         >
-          Plan aktivieren & Lücke schließen
+          {isPositive ? "Perfekt! Plan übernehmen" : "Plan aktivieren & Lücke schließen"}
         </button>
       </div>
+
+      {/* HR Modal */}
+      {showHRModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={closeModal}>
+          <div className="w-full max-w-[430px] bg-slate-900 border border-slate-700 rounded-t-3xl p-6 animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+
+            {!hrSent ? (
+              <>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <Mail size={18} className="text-indigo-400" />
+                    <span className="font-extrabold text-white text-[16px]">{hrModalContent[showHRModal].title}</span>
+                  </div>
+                  <button onClick={closeModal} className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 cursor-pointer transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">An</p>
+                    <p className="text-[13px] text-slate-300 font-medium">{hrModalContent[showHRModal].recipient}</p>
+                  </div>
+                  <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Betreff</p>
+                    <p className="text-[13px] text-slate-300 font-medium">{hrModalContent[showHRModal].subject}</p>
+                  </div>
+                  <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Nachricht</p>
+                    <p className="text-[12px] text-slate-400 leading-relaxed whitespace-pre-line">{hrModalContent[showHRModal].body}</p>
+                  </div>
+                </div>
+
+                <button onClick={handleHRSend} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[14px] rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                  <Send size={16} /> Jetzt senden
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col items-center py-6 animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 rounded-full bg-indigo-500/15 flex items-center justify-center mb-4">
+                  <CheckCircle2 size={32} className="text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-2">Antrag gesendet!</h3>
+                <p className="text-sm text-slate-400 text-center mb-6">Deine HR-Abteilung wurde informiert und wird sich in Kürze bei dir melden.</p>
+                <button onClick={closeModal} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[14px] rounded-xl transition-colors cursor-pointer">
+                  Schließen
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
