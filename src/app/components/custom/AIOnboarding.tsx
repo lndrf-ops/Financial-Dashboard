@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, ArrowLeft, ChevronRight, UploadCloud, FileText, Building, Briefcase } from "lucide-react";
+import { Loader2, ArrowLeft, ChevronRight, UploadCloud, FileText, Building, Briefcase, X, Maximize2 } from "lucide-react";
 
 export interface AIOnboardingData {
   age: number;
@@ -201,6 +201,8 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
   const [livePension, setLivePension] = useState(0);
   const [liveBav, setLiveBav] = useState(0);
 
+  const [fullscreenImage, setFullscreenImage] = useState<{ src: string; label: string } | null>(null);
+
   // Selection states
   const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null);
   const [selectedDRVOption, setSelectedDRVOption] = useState<'upload' | 'manual' | null>(null);
@@ -314,7 +316,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
     if (step === 5) return {
       onNext: handleNext,
       nextDisabled: false,
-      nextLabel: foundBonus > 0 ? "Genial, weiter geht's" : "Weiter",
+      nextLabel: foundBonus > 0 ? "Weiter" : "Weiter",
       onBack: handleBack,
     };
     if (step === 6) return {
@@ -434,7 +436,15 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
             {!isUploadingDRV ? (
               <>
                 <h1 className="text-2xl font-black text-white mb-3 leading-tight">Deine gesetzliche Rente.</h1>
-                <p className="text-sm text-slate-400 mb-8 leading-relaxed">Der wichtigste Grundbaustein. Hast du deine Renteninformation zur Hand?</p>
+                <p className="text-sm text-slate-400 mb-5 leading-relaxed">Der wichtigste Grundbaustein. Hast du deine Renteninformation zur Hand?</p>
+                <button onClick={() => setFullscreenImage({ src: '/Renteninformation.webp', label: 'Renteninformation' })} className="rounded-2xl overflow-hidden border border-slate-800 mb-5 relative w-full cursor-pointer group">
+                  <img src="/Renteninformation.webp" alt="Beispiel Renteninformation" className="w-full object-cover max-h-40 object-top" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                  <p className="absolute bottom-2 left-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Dieses Dokument benötigst du</p>
+                  <div className="absolute top-2 right-2 w-7 h-7 bg-slate-950/60 rounded-lg flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <Maximize2 size={13} className="text-white" />
+                  </div>
+                </button>
                 <div className="space-y-3">
                   <div
                     onClick={() => setSelectedDRVOption('upload')}
@@ -461,7 +471,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
                     <span className="text-[10px] uppercase tracking-widest text-slate-600 font-bold">Oder manuell</span>
                     <div className="h-px bg-slate-800 flex-1" />
                   </div>
-                  <OptionCard title="Über Gehalt schätzen" subtitle="Geht schneller, aber ungenauer" selected={selectedDRVOption === 'manual'} onClick={() => setSelectedDRVOption('manual')} />
+                  <OptionCard emoji="💰" title="Über Gehalt schätzen" subtitle="Geht schneller, aber ungenauer" selected={selectedDRVOption === 'manual'} onClick={() => setSelectedDRVOption('manual')} />
                 </div>
               </>
             ) : (
@@ -476,7 +486,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
                     <FileText size={20} className="text-indigo-400 animate-pulse" />
                   </div>
                 </div>
-                <p className="text-sm font-bold text-white text-center mb-1">Renteninformation_2025.pdf</p>
+                <p className="text-sm font-bold text-white text-center mb-1">Renteninformation_2026.pdf</p>
                 <p className="text-xs text-indigo-400 animate-pulse text-center">Extrahiere Entgeltpunkte...</p>
               </div>
             )}
@@ -537,6 +547,14 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
               <>
                 <h1 className="text-2xl font-black text-white mb-3 leading-tight">Deine Betriebliche Rente.</h1>
                 <p className="text-sm text-slate-400 mb-8 leading-relaxed">Hast du eine bAV über deinen Arbeitgeber (z.B. Allianz, MetallRente)?</p>
+                <button onClick={() => setFullscreenImage({ src: '/Renteninformation.webp', label: 'Standmitteilung' })} className="rounded-2xl overflow-hidden border border-slate-800 mb-5 relative w-full cursor-pointer group">
+                  <img src="/Renteninformation.webp" alt="Beispiel Renteninformation" className="w-full object-cover max-h-40 object-top" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                  <p className="absolute bottom-2 left-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Dieses Dokument benötigst du</p>
+                  <div className="absolute top-2 right-2 w-7 h-7 bg-slate-950/60 rounded-lg flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <Maximize2 size={13} className="text-white" />
+                  </div>
+                </button>
                 <div className="space-y-3">
                   <div
                     onClick={() => setSelectedBavOption('upload')}
@@ -557,7 +575,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
                     </div>
                     <ChevronRight size={18} className={selectedBavOption === 'upload' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-indigo-400 transition-colors'} />
                   </div>
-                  <OptionCard title="Ich habe keine bAV" subtitle="Oder weiß es nicht" selected={selectedBavOption === 'none'} onClick={() => setSelectedBavOption('none')} />
+                  <OptionCard emoji="🤷" title="Ich habe keine bAV" subtitle="Oder weiß es nicht" selected={selectedBavOption === 'none'} onClick={() => setSelectedBavOption('none')} />
                 </div>
               </>
             ) : (
@@ -584,10 +602,10 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
             <h1 className="text-2xl font-black text-white mb-8 leading-tight">Wie viel legst du privat jeden Monat zurück?</h1>
             <div className="space-y-3">
-              <OptionCard title="0 €" subtitle="Noch gar nichts" selected={selectedSavingsAmount === 0} onClick={() => setSelectedSavingsAmount(0)} />
-              <OptionCard title="50 €" subtitle="Der Einstieg" selected={selectedSavingsAmount === 50} onClick={() => setSelectedSavingsAmount(50)} />
-              <OptionCard title="150 €" subtitle="Der Klassiker" selected={selectedSavingsAmount === 150} onClick={() => setSelectedSavingsAmount(150)} />
-              <OptionCard title="Eigener Betrag" subtitle="Individuell festlegen" selected={selectedSavingsAmount === -1} onClick={() => { setSelectedSavingsAmount(-1); setShowCustomMonthly(true); }} />
+              <OptionCard emoji="💤" title="0 €" subtitle="Noch gar nichts" selected={selectedSavingsAmount === 0} onClick={() => setSelectedSavingsAmount(0)} />
+              <OptionCard emoji="🌱" title="50 €" subtitle="Der Einstieg" selected={selectedSavingsAmount === 50} onClick={() => setSelectedSavingsAmount(50)} />
+              <OptionCard emoji="⭐" title="150 €" subtitle="Der Klassiker" selected={selectedSavingsAmount === 150} onClick={() => setSelectedSavingsAmount(150)} />
+              <OptionCard emoji="🎯" title="Eigener Betrag" subtitle="Individuell festlegen" selected={selectedSavingsAmount === -1} onClick={() => { setSelectedSavingsAmount(-1); setShowCustomMonthly(true); }} />
             </div>
           </div>
         )}
@@ -625,6 +643,21 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
       {navConfig && (
         <div className="flex-none px-6 pb-8 pt-4 bg-slate-950">
           <BottomNav {...navConfig} />
+        </div>
+      )}
+
+      {/* Fullscreen image overlay */}
+      {fullscreenImage && (
+        <div className="absolute inset-0 z-50 bg-slate-950/95 flex flex-col animate-in fade-in duration-200">
+          <div className="flex items-center justify-between px-5 py-4">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{fullscreenImage.label}</p>
+            <button onClick={() => setFullscreenImage(null)} className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition-colors cursor-pointer">
+              <X size={18} className="text-white" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pb-6">
+            <img src={fullscreenImage.src} alt={fullscreenImage.label} className="w-full rounded-2xl object-contain" />
+          </div>
         </div>
       )}
     </div>

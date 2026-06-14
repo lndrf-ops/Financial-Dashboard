@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { ArrowLeft, Zap, PieChart, Bot, CheckCircle2, Briefcase, Landmark, X, Mail, Send } from "lucide-react";
-import { Switch } from "../ui/switch";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Zap, CalendarClock, PieChart, CheckCircle2, Briefcase, Landmark, ChevronRight, Send, Loader2, TrendingUp, X, Sparkles } from "lucide-react";
 
 interface OptimizationPlanProps {
   onBack: () => void; projectedMonthly: number; targetPension: number; diff: number;
@@ -14,257 +13,238 @@ interface OptimizationPlanProps {
 export function OptimizationPlan({ 
   onBack, diff, monthlyContribution, setMonthlyContribution, expectedReturn, setExpectedReturn, retirementAge, setRetirementAge, vlActive, setVlActive, bavNettoVerzicht, setBavNettoVerzicht
 }: OptimizationPlanProps) {
-  const isPositive = diff >= 0;
-  const [appliedStrategy, setAppliedStrategy] = useState<string | null>(null);
-  const [showHRModal, setShowHRModal] = useState<'vl' | 'bav' | null>(null);
-  const [hrSent, setHRSent] = useState(false);
-
-  const handleHRSend = () => {
-    setHRSent(false);
-    setTimeout(() => setHRSent(true), 1500);
-  };
-
-  const closeModal = () => { setShowHRModal(null); setHRSent(false); };
-
-  const hrModalContent = {
-    vl: {
-      title: "VL-Antrag senden",
-      recipient: "hr@meinefirma.de",
-      subject: "Antrag auf vermögenswirksame Leistungen",
-      body: "Sehr geehrte Damen und Herren,\n\nhiermit beantrage ich die Gewährung von vermögenswirksamen Leistungen gemäß § 2 VermBG. Ich bitte um Einrichtung der monatlichen Zahlung in Höhe von 40 €.\n\nMit freundlichen Grüßen",
-    },
-    bav: {
-      title: "bAV-Antrag senden",
-      recipient: "hr@meinefirma.de",
-      subject: "Antrag auf Entgeltumwandlung (bAV)",
-      body: `Sehr geehrte Damen und Herren,\n\nhiermit beantrage ich die Einrichtung einer betrieblichen Altersvorsorge via Entgeltumwandlung in Höhe von ${bavNettoVerzicht[0]} € monatlich (Netto-Verzicht).\n\nMit freundlichen Grüßen`,
-    },
-  };
-
-  const gapMagnitude = diff < 0 ? Math.abs(diff) : 0;
-  const suggestedSavings = Math.max(25, Math.ceil((gapMagnitude * 0.4) / 25) * 25); 
-  const perfectBavNetto = gapMagnitude === 0 ? 0 : Math.min(250, Math.max(10, Math.ceil((gapMagnitude * 0.4 / 2.1) / 10) * 10));
-
-  // NEU: Kaffee-Übersetzung
-  const coffeesPerDay = Math.max(1, Math.ceil(gapMagnitude / 3.5 / 30));
-
-  const applyStrategy = (type: 'save' | 'invest' | 'time') => {
-    setAppliedStrategy(type);
-    if (type === 'save') setMonthlyContribution(monthlyContribution + suggestedSavings);
-    else if (type === 'invest') setExpectedReturn(8.5); 
-    else if (type === 'time') setRetirementAge(retirementAge + 2);
-  };
+  const [step, setStep] = useState(1);
+  const [isSending, setIsSending] = useState(false);
   
-  const bavBruttoInvest = Math.round(bavNettoVerzicht[0] * 2.1);
+  // Lokale States für die Bestätigung
+  const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(vlActive ? 'yes' : null);
+  const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(bavNettoVerzicht[0] > 0 ? 'yes' : null);
+  const [appliedStrategy, setAppliedStrategy] = useState<'save' | 'invest' | 'time' | 'none' | null>(null);
 
-  return (
-    <div className="bg-slate-950 min-h-screen text-slate-200 max-w-[430px] mx-auto font-sans overflow-x-hidden pb-10">
-      
-      <div className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 px-6 py-4 flex items-center gap-4">
-        <button onClick={onBack} className="p-2 -ml-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer text-slate-300 hover:text-white">
+  const isPositive = diff >= 0;
+  const currentGap = diff < 0 ? Math.abs(diff) : 0;
+  
+  // Wir "frieren" die Werte beim Start ein, um den "Unendlich aufaddieren"-Bug zu beheben!
+  const [initialGap] = useState(currentGap);
+  const [originalContribution] = useState(monthlyContribution);
+  const [originalReturn] = useState(expectedReturn);
+  const [originalRetirementAge] = useState(retirementAge);
+
+  const [suggestedSavings] = useState(() => Math.max(25, Math.ceil((initialGap * 0.4) / 25) * 25));
+  const [perfectBavNetto] = useState(() => initialGap === 0 ? 0 : Math.min(250, Math.max(10, Math.ceil((initialGap * 0.4 / 2.1) / 10) * 10)));
+  const [coffeesPerDay] = useState(() => Math.max(1, Math.ceil(initialGap / 3.5 / 30)));
+
+  const totalSteps = 5;
+  const progress = (step / totalSteps) * 100;
+
+  // Direkter Abschluss, falls es keine Lücke gibt
+  useEffect(() => {
+    if (step === 1 && isPositive) onBack(); 
+  }, [step, isPositive, onBack]);
+
+  const handleNext = () => setStep(prev => prev + 1);
+  const handleBack = () => {
+    if (step > 1) setStep(prev => prev - 1);
+    else onBack();
+  };
+
+  const handleSendHR = () => {
+    setIsSending(true);
+    setTimeout(() => {
+      setIsSending(false);
+      handleNext();
+    }, 2000);
+  };
+
+  // Logische Fehlerbehebung: Vorherigen Zustand sauber zurücksetzen, bevor neuer angewandt wird
+  const handleSelectStrategy = (type: 'save' | 'invest' | 'time' | 'none') => {
+    setAppliedStrategy(type);
+
+    // 1. Immer zuerst auf die Original-Werte zurücksetzen
+    setMonthlyContribution(originalContribution);
+    setExpectedReturn(originalReturn);
+    setRetirementAge(originalRetirementAge);
+
+    // 2. Dann die neue Strategie anwenden
+    if (type === 'save') setMonthlyContribution(originalContribution + suggestedSavings);
+    if (type === 'invest') setExpectedReturn(8.5);
+    if (type === 'time') setRetirementAge(originalRetirementAge + 2);
+  };
+
+  const OptionCard = ({ emoji, title, subtitle, onClick, active = false, disabled = false, highlight = false }: any) => (
+    <button 
+      onClick={onClick} disabled={disabled} 
+      className={`w-full p-5 rounded-2xl flex items-center justify-between transition-all text-left group border ${
+        active ? 'bg-indigo-500/20 border-indigo-500 shadow-sm shadow-indigo-500/10' : 
+        highlight ? 'bg-indigo-600 hover:bg-indigo-500 border-indigo-500 shadow-lg shadow-indigo-500/20' : 
+        'bg-slate-900 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/80'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <div className="flex items-center gap-4">
+        <div className="flex items-center justify-center w-8 h-8">{emoji}</div>
+        <div>
+          <h3 className={`font-bold text-[15px] text-white`}>{title}</h3>
+          {subtitle && <p className={`text-[12px] mt-0.5 ${highlight ? 'text-indigo-200' : 'text-slate-400'}`}>{subtitle}</p>}
+        </div>
+      </div>
+      {active ? <CheckCircle2 size={20} className="text-indigo-400" /> : <ChevronRight size={18} className={highlight ? 'text-white' : 'text-slate-600 group-hover:text-indigo-400'} />}
+    </button>
+  );
+
+  const BottomNav = ({ onNext, nextDisabled = false, nextLabel = "Weiter", onBack, nextIcon }: any) => (
+    <div className="flex gap-3 mt-auto pt-6 border-t border-slate-800/50">
+      {onBack && (
+        <button onClick={onBack} className="flex-none w-14 h-14 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl transition-colors cursor-pointer flex items-center justify-center shadow-sm">
           <ArrowLeft size={20} />
         </button>
-        <span className="font-extrabold text-[17px] tracking-tight text-white">Dein Aktionsplan</span>
+      )}
+      <button onClick={onNext} disabled={nextDisabled} className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-[15px] rounded-xl transition-colors cursor-pointer flex justify-center items-center gap-2 shadow-lg shadow-indigo-500/25">
+        {nextLabel} {nextIcon}
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="bg-slate-950 min-h-screen flex flex-col text-slate-200 max-w-[430px] mx-auto font-sans relative">
+      
+      {/* Sticky Header mit Live-Ticker */}
+      <div className="sticky top-0 z-50 bg-slate-950 px-6 py-4 border-b border-slate-800">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors cursor-pointer"><ArrowLeft size={20} /></button>
+          <div className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-colors duration-500 ${isPositive ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}`}>
+             {isPositive ? <CheckCircle2 size={14} /> : <Zap size={14} className="fill-rose-400/20" />}
+             <span className="text-xs font-bold tracking-wide">{isPositive ? "Ziel erreicht" : `Lücke: ${currentGap.toLocaleString("de-DE")} €`}</span>
+          </div>
+        </div>
+        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-full bg-indigo-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+        </div>
       </div>
 
-      <div className="px-6 pt-8 pb-6">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] font-semibold tracking-widest uppercase text-slate-500">Aktueller Status</p>
-          {isPositive && (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
-              <CheckCircle2 size={12} /> Ziel erreicht
-            </span>
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8 flex flex-col">
         
-        <div className="text-4xl font-black tracking-tight leading-none text-white transition-all mb-6">
-          {isPositive ? "Rente gesichert" : "Achtung: Rentenlücke"}
-        </div>
-        
-        <div className={`p-5 rounded-2xl border mb-2 transition-colors shadow-lg ${isPositive ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-bold text-white">{isPositive ? 'Du liegst im Plus:' : 'Dir fehlen monatlich:'}</span>
-            <span className={`text-xl font-black ${isPositive ? 'text-indigo-400' : 'text-rose-400'}`}>
-              {isPositive ? "+" : ""}€ {Math.abs(diff).toLocaleString("de-DE")}
-            </span>
-          </div>
-          {!isPositive && (
-            <div className="mt-3 pt-3 border-t border-rose-500/20">
-              <p className="text-xs text-rose-300/90 leading-relaxed font-medium">
-                💡 Das entspricht dem Verzicht auf ca. <strong>{coffeesPerDay} Kaffee To-Go</strong> pro Tag. Packen wir's an!
+        {step === 1 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Dein Aktionsplan.</h1>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">
+              Dir fehlen aktuell noch <strong className="text-rose-400">{currentGap} €</strong> pro Monat, um deinen Lebensstandard im Alter zu halten.
+            </p>
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl mb-8">
+              <p className="text-[13px] text-slate-300 leading-relaxed font-medium">
+                💡 Keine Panik. Das entspricht dem Verzicht auf ca. <strong>{coffeesPerDay} Kaffee To-Go</strong> pro Tag. Wir schließen diese Lücke in 3 simplen Schritten.
               </p>
             </div>
-          )}
-        </div>
-      </div>
-
-      <div className="px-6 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">1. Quick Wins (Free Money)</h2>
-        </div>
-        <div className="space-y-4">
-          
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                  <Landmark size={20} className="text-amber-400" />
-                </div>
-                <div>
-                  <p className="font-bold text-[14px] text-white">VL-Sparen</p>
-                  <p className="text-[11px] text-slate-400">Bis zu 40€ geschenkt vom Chef</p>
-                </div>
-              </div>
-              <Switch checked={vlActive} onCheckedChange={(c) => setVlActive(c)} className="data-[state=checked]:bg-indigo-500" />
-            </div>
-            {vlActive && (
-              <div className="mt-4 pt-3 border-t border-slate-800 animate-in fade-in">
-                <button onClick={() => setShowHRModal('vl')} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[12px] font-bold rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                  <Mail size={14} /> Antrag direkt an HR senden
-                </button>
-              </div>
-            )}
+            <BottomNav onNext={handleNext} nextLabel="Los geht's" nextIcon={<Sparkles size={18} />} />
           </div>
+        )}
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-             <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                  <Briefcase size={16} className="text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-[14px] font-bold text-white">Betriebliche Rente (bAV)</h3>
-                  <p className="text-[11px] text-slate-400">Steuervorteile & 15% AG-Zuschuss</p>
-                </div>
-              </div>
-              
-              <div className="bg-slate-950 rounded-xl p-4 mb-4 flex items-center justify-between border border-slate-800">
-                 <div>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Dein Netto-Verzicht</p>
-                    <p className="text-lg font-bold text-rose-400">- € {bavNettoVerzicht[0]}</p>
-                 </div>
-                 <Zap size={18} className="text-slate-600" />
-                 <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Echtes Investment</p>
-                    <p className="text-lg font-bold text-indigo-400">+ € {bavBruttoInvest}</p>
-                 </div>
-              </div>
-
-              {bavNettoVerzicht[0] === 0 ? (
-                <button 
-                  onClick={() => setBavNettoVerzicht([perfectBavNetto])}
-                  disabled={isPositive}
-                  className={`w-full py-3 border text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-2 group ${isPositive ? 'bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/30 text-indigo-400 cursor-pointer'}`}
-                >
-                  <Zap size={16} className={isPositive ? 'text-slate-600' : 'text-amber-400 fill-amber-400 group-hover:scale-110 transition-transform'} /> 
-                  {isPositive ? "Optimierung nicht nötig" : `Lücke schließen (${perfectBavNetto} € Netto)`}
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button onClick={() => setBavNettoVerzicht([0])} className="w-1/3 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-bold rounded-xl transition-colors flex items-center justify-center cursor-pointer">
-                    <X size={16} />
-                  </button>
-                  <button onClick={() => setShowHRModal('bav')} className="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                    <Mail size={16} /> Bei HR einreichen
-                  </button>
-                </div>
-              )}
-          </div>
-        </div>
-      </div>
-
-      {!isPositive && (
-        <div className="px-6 mb-8 animate-in fade-in">
-           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">2. KI-Strategien (1-Klick)</h2>
-          </div>
-          <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-5 relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-3">
-              <Bot size={18} className="text-indigo-400" />
-              <span className="text-[12px] font-bold text-white">Lücke automatisch schließen</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Wähle den Weg, der am besten zu deinem Leben passt. Wir passen deinen Plan im Hintergrund automatisch an.
+        {step === 2 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-2">Schritt 1 von 3</div>
+            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Geld vom Chef.</h1>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">
+              Arbeitgeber verschenken oft bis zu 40 € pro Monat an vermögenswirksamen Leistungen (VL).
             </p>
             <div className="space-y-3">
-              <button onClick={() => applyStrategy('save')} className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${appliedStrategy === 'save' ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-900 border-slate-800 hover:border-indigo-500/50 text-slate-200'}`}>
-                <div className="flex items-center gap-3">
-                  <Zap size={18} className={appliedStrategy === 'save' ? 'text-white' : 'text-indigo-400'} />
-                  <span className="text-[14px] font-bold">Ich spare mehr</span>
-                </div>
-                <span className={`text-[12px] font-bold ${appliedStrategy === 'save' ? 'text-indigo-100' : 'text-slate-400'}`}>+ {suggestedSavings} € mtl.</span>
-              </button>
-              <button onClick={() => applyStrategy('invest')} className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${appliedStrategy === 'invest' ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-900 border-slate-800 hover:border-indigo-500/50 text-slate-200'}`}>
-                <div className="flex items-center gap-3">
-                  <PieChart size={18} className={appliedStrategy === 'invest' ? 'text-white' : 'text-cyan-400'} />
-                  <span className="text-[14px] font-bold">Ich erhöhe mein Risiko</span>
-                </div>
-                <span className={`text-[12px] font-bold ${appliedStrategy === 'invest' ? 'text-indigo-100' : 'text-slate-400'}`}>Auf 8.5% p.a.</span>
-              </button>
+              <OptionCard emoji={<Landmark size={20} className="text-amber-400" />} title="VL-Sparen aktivieren" subtitle="Nimmt 40 € Lücke ab" active={selectedVL === 'yes'} onClick={() => { setSelectedVL('yes'); setVlActive(true); }} />
+              <OptionCard emoji={<X size={20} className="text-slate-400" />} title="Überspringen" subtitle="Mein AG bietet das nicht an" active={selectedVL === 'no'} onClick={() => { setSelectedVL('no'); setVlActive(false); }} />
             </div>
+            <BottomNav onBack={handleBack} onNext={handleNext} nextDisabled={!selectedVL} nextLabel="Weiter" nextIcon={<ChevronRight size={18} />} />
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="px-6 mt-4">
-        <button
-          onClick={onBack}
-          className="w-full font-extrabold text-[15px] py-4 rounded-xl transition-all cursor-pointer flex justify-center items-center gap-2 shadow-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/25"
-        >
-          {isPositive ? "Perfekt! Plan übernehmen" : "Plan aktivieren & Lücke schließen"}
-        </button>
-      </div>
+        {step === 3 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-2">Schritt 2 von 3</div>
+            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Die Brutto-Netto-Magie.</h1>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+              Durch die betriebliche Altersvorsorge sparst du Steuern. Um deine verbleibende Lücke zu schließen, reicht ein kleiner Netto-Verzicht.
+            </p>
+            <div className="space-y-3">
+              <OptionCard emoji={<Briefcase size={20} className="text-indigo-200" />} title={`bAV nutzen (${perfectBavNetto} € Netto)`} subtitle={`Fließt als ${Math.round(perfectBavNetto * 2.1)} € in deinen Vertrag`} active={selectedBAV === 'yes'} highlight={selectedBAV !== 'yes'} onClick={() => { setSelectedBAV('yes'); setBavNettoVerzicht([perfectBavNetto]); }} />
+              <OptionCard emoji={<X size={20} className="text-slate-400" />} title="Überspringen" subtitle="Ich regle das lieber privat" active={selectedBAV === 'no'} onClick={() => { setSelectedBAV('no'); setBavNettoVerzicht([0]); }} />
+            </div>
+            <BottomNav onBack={handleBack} onNext={handleNext} nextDisabled={!selectedBAV} nextLabel="Weiter" nextIcon={<ChevronRight size={18} />} />
+          </div>
+        )}
 
-      {/* HR Modal */}
-      {showHRModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={closeModal}>
-          <div className="w-full max-w-[430px] bg-slate-900 border border-slate-700 rounded-t-3xl p-6 animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
-
-            {!hrSent ? (
-              <>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-2">
-                    <Mail size={18} className="text-indigo-400" />
-                    <span className="font-extrabold text-white text-[16px]">{hrModalContent[showHRModal].title}</span>
-                  </div>
-                  <button onClick={closeModal} className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 cursor-pointer transition-colors">
-                    <X size={16} />
-                  </button>
+        {step === 4 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-2">Schritt 3 von 3</div>
+            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Der private Turbo.</h1>
+            {isPositive ? (
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle2 size={32} className="text-emerald-400" />
                 </div>
-
-                <div className="space-y-3 mb-5">
-                  <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">An</p>
-                    <p className="text-[13px] text-slate-300 font-medium">{hrModalContent[showHRModal].recipient}</p>
-                  </div>
-                  <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Betreff</p>
-                    <p className="text-[13px] text-slate-300 font-medium">{hrModalContent[showHRModal].subject}</p>
-                  </div>
-                  <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Nachricht</p>
-                    <p className="text-[12px] text-slate-400 leading-relaxed whitespace-pre-line">{hrModalContent[showHRModal].body}</p>
-                  </div>
-                </div>
-
-                <button onClick={handleHRSend} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[14px] rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                  <Send size={16} /> Jetzt senden
-                </button>
-              </>
+                <h2 className="text-xl font-bold text-white mb-2">Ziel erreicht!</h2>
+                <p className="text-sm text-slate-400 text-center">Du musst deine privaten Finanzen nicht weiter anpassen.</p>
+              </div>
             ) : (
-              <div className="flex flex-col items-center py-6 animate-in zoom-in-95 duration-300">
-                <div className="w-16 h-16 rounded-full bg-indigo-500/15 flex items-center justify-center mb-4">
-                  <CheckCircle2 size={32} className="text-indigo-400" />
+              <>
+                <p className="text-sm text-slate-400 mb-6 leading-relaxed">Wähle eine Strategie, wie wir deinen privaten Plan anpassen sollen:</p>
+                <div className="space-y-3 overflow-y-auto pb-4">
+                  <OptionCard emoji={<TrendingUp size={20} className="text-emerald-400" />} title="Ich spare mehr" subtitle={`Sparrate auf ${monthlyContribution + suggestedSavings} € erhöhen`} active={appliedStrategy === 'save'} onClick={() => handleSelectStrategy('save')} />
+                  <OptionCard emoji={<PieChart size={20} className="text-cyan-400" />} title="Mehr Risiko" subtitle="Renditeerwartung auf 8.5% anheben" active={appliedStrategy === 'invest'} onClick={() => handleSelectStrategy('invest')} />
+                  <OptionCard emoji={<CalendarClock size={20} className="text-purple-400" />} title="Länger arbeiten" subtitle="Renteneintritt um 2 Jahre verschieben" active={appliedStrategy === 'time'} onClick={() => handleSelectStrategy('time')} />
+                  <OptionCard emoji={<X size={20} className="text-slate-400" />} title="Nichts anpassen" subtitle="Lücke bleibt bestehen" active={appliedStrategy === 'none'} onClick={() => handleSelectStrategy('none')} />
                 </div>
-                <h3 className="text-xl font-black text-white mb-2">Antrag gesendet!</h3>
-                <p className="text-sm text-slate-400 text-center mb-6">Deine HR-Abteilung wurde informiert und wird sich in Kürze bei dir melden.</p>
-                <button onClick={closeModal} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[14px] rounded-xl transition-colors cursor-pointer">
-                  Schließen
-                </button>
+              </>
+            )}
+            <BottomNav onBack={handleBack} onNext={handleNext} nextDisabled={!isPositive && !appliedStrategy} nextLabel="Weiter" nextIcon={<ChevronRight size={18} />} />
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Wir übernehmen die Bürokratie.</h1>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+              {(vlActive || bavNettoVerzicht[0] > 0) 
+                ? "Du hast dich für Arbeitgeber-Zuschüsse entschieden. Wir haben die Anträge für deine Personalabteilung vorbereitet." 
+                : "Du hast deinen Plan optimiert. Alles ist sicher hinterlegt."}
+            </p>
+
+            {(vlActive || bavNettoVerzicht[0] > 0) && (
+              <div className="space-y-4 mb-8">
+                {vlActive && (
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center"><Send size={16} className="text-indigo-400" /></div>
+                    <div>
+                      <p className="font-bold text-[14px] text-white">Antrag auf VL-Sparen</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">An: hr@meinefirma.de</p>
+                    </div>
+                  </div>
+                )}
+                {bavNettoVerzicht[0] > 0 && (
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center"><Send size={16} className="text-indigo-400" /></div>
+                    <div>
+                      <p className="font-bold text-[14px] text-white">Antrag auf bAV ({bavNettoVerzicht[0]} €)</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">An: hr@meinefirma.de</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+            <BottomNav onBack={handleBack} onNext={handleSendHR} nextDisabled={isSending} nextLabel={isSending ? "Sende..." : "Plan aktivieren"} nextIcon={isSending ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />} />
           </div>
-        </div>
-      )}
+        )}
+
+        {step === 6 && (
+           <div className="flex-1 flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
+             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">
+               <CheckCircle2 size={40} className="text-emerald-400" />
+             </div>
+             <h1 className="text-3xl font-black text-white mb-2">Erfolgreich!</h1>
+             <p className="text-sm text-slate-400 text-center px-4 mb-10">
+               Dein Plan wurde aktualisiert und (falls gewünscht) an HR gesendet.
+             </p>
+             <button onClick={onBack} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-[15px] py-4 rounded-xl transition-colors cursor-pointer flex justify-center items-center gap-2">
+               Zurück zum Dashboard <ChevronRight size={18} />
+             </button>
+           </div>
+        )}
+      </div>
     </div>
   );
 }

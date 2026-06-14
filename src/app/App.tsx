@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ComposedChart, Area, ResponsiveContainer, Tooltip, ReferenceLine } from "recharts";
-import { TrendingUp, Bell, LogOut, Building2, Briefcase, Home, Landmark, Bitcoin, X, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Bell, LogOut, Building2, Briefcase, Home, Landmark, Bitcoin, X, CheckCircle2, Sparkles, Users } from "lucide-react";
 
 import { AssetBreakdown, Asset } from "./components/custom/AssetBreakdown";
 import { OptimizationPlan } from "./components/custom/OptimizationPlan";
@@ -11,7 +10,6 @@ import { ProfileView } from "./components/custom/ProfileView";
 import { AIOnboarding, AIOnboardingData } from "./components/custom/AIOnboarding";
 import { PersonalDataView } from "./components/custom/PersonalDataView";
 
-// NEU: Globale und unabhängige CSS-Konfetti-Komponente
 function Confetti() {
   const colors = ['#6366f1', '#8b5cf6', '#22d3ee', '#10b981', '#f59e0b', '#f43f5e'];
   return (
@@ -45,27 +43,11 @@ function Confetti() {
   );
 }
 
-function CustomTooltip({ active, payload }: any) {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 shadow-2xl flex flex-col gap-1 min-w-[140px]">
-        <span className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">Alter {data.age}</span>
-        <div className="flex justify-between items-center gap-4">
-           <span className="text-indigo-400 font-bold text-[13px]">Gesamtkapital</span>
-           <span className="text-white font-extrabold text-[13px]">€ {data.expected.toLocaleString("de-DE")}</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-}
-
 export default function App() {
   const [activeView, setActiveView] = useState<'welcome' | 'aionboarding' | 'onboarding' | 'dashboard' | 'optimize' | 'invest' | 'simulate' | 'profile' | 'personalData'>('welcome');
   const [notification, setNotification] = useState<string | null>(null);
   const [hasShownSuccessToast, setHasShownSuccessToast] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false); // NEU: Confetti State
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const [currentAge, setCurrentAge] = useState(30);
   const [inflation, setInflation] = useState([2.5]);
@@ -85,10 +67,10 @@ export default function App() {
 
   const [dynamicAssets, setDynamicAssets] = useState<Asset[]>([
     { id: "statutory", name: "Gesetzliche Rente", subtitle: "Via PDF-Scan (Netto)", icon: Building2, payout: 0, accumulatedLabel: "Beiträge", accumulatedValue: 0 },
-    { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Depotwert", accumulatedValue: 0 }, 
+    { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: 0 }, 
     { id: "company", name: "Betriebliche Rente", subtitle: "Entgeltumwandlung", icon: Briefcase, payout: 0, accumulatedLabel: "Angespartes Kapital", accumulatedValue: 0 },
     { id: "realestate", name: "Immobilie", subtitle: "Eigenheim / Vermietung", icon: Home, payout: 0, accumulatedLabel: "Immobilienwert", accumulatedValue: 0 },
-    { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Guthaben", accumulatedValue: 0 },
+    { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: 0 },
     { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Portfolio", accumulatedValue: 0 }
   ]);
 
@@ -108,12 +90,11 @@ export default function App() {
     const cashStart = data.initialCapital - etfStart;
 
     setDynamicAssets([
-      { id: "statutory", name: "Gesetzliche Rente", subtitle: "Via PDF-Scan (Netto)", icon: Building2, payout: data.drvNetto, accumulatedLabel: "Beiträge", accumulatedValue: data.drvNetto * 40 },
-      { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Depot", accumulatedValue: etfStart }, 
-      { id: "company", name: "Betriebliche Rente", subtitle: "Standmitteilung (Scan)", icon: Briefcase, payout: data.bavPayout, accumulatedLabel: "Kapital", accumulatedValue: data.bavPayout > 0 ? 15000 : 0 },
-      { id: "company", name: "Betriebliche Rente", subtitle: "Entgeltumwandlung", icon: Briefcase, payout: 0, accumulatedLabel: "Kapital", accumulatedValue: 0 },
+      { id: "statutory", name: "Gesetzliche Rente", subtitle: "Via KI-Scan (Netto)", icon: Building2, payout: data.drvNetto, accumulatedLabel: "Beiträge", accumulatedValue: data.drvNetto * 40 },
+      { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: etfStart }, 
+      { id: "company", name: "Betriebliche Rente", subtitle: "Standmitteilung / Vertrag", icon: Briefcase, payout: data.bavPayout, accumulatedLabel: "Kapital", accumulatedValue: data.bavPayout > 0 ? 15000 : 0 },
       { id: "realestate", name: "Immobilie", subtitle: "Eigenheim / Vermietung", icon: Home, payout: 0, accumulatedLabel: "Verkehrswert", accumulatedValue: 0 },
-      { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Guthaben", accumulatedValue: cashStart },
+      { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: cashStart },
       { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Wallet", accumulatedValue: 0 }
     ]);
     setActiveView('dashboard');
@@ -128,10 +109,10 @@ export default function App() {
     setStressTests({ bearMarket: false, highInflation: false, longevity: false });
     setDynamicAssets([
       { id: "statutory", name: "Gesetzliche Rente", subtitle: "Deutsche Rentenversicherung", icon: Building2, payout: p.assets.statutoryPayout, accumulatedLabel: "Beiträge", accumulatedValue: p.assets.statutoryAcc },
-      { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Depot", accumulatedValue: p.assets.etfAcc }, 
+      { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: p.assets.etfAcc }, 
       { id: "company", name: "Betriebliche Rente", subtitle: "Entgeltumwandlung", icon: Briefcase, payout: p.assets.companyPayout, accumulatedLabel: "Kapital", accumulatedValue: p.assets.companyAcc },
       { id: "realestate", name: "Immobilie", subtitle: "Eigenheim / Vermietung", icon: Home, payout: p.assets.realestatePayout, accumulatedLabel: "Verkehrswert", accumulatedValue: p.assets.realestateAcc },
-      { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Guthaben", accumulatedValue: p.assets.cashAcc },
+      { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: p.assets.cashAcc },
       { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Wallet", accumulatedValue: p.assets.cryptoAcc }
     ]);
     setActiveView('dashboard');
@@ -233,14 +214,32 @@ export default function App() {
   const combinedMonthlyNominal = statutoryValue + companyValue + realEstatePayout + additionalMonthlyPayoutNominal;
   const totalNetWorthAtRetirement = capitalAtRetirement + realEstateAcc;
 
-  // NEU: Triggert Konfetti und Toast, sobald man erfolgreich aufs Dashboard zurückkehrt
+  // Werte für das Asset Breakdown
+  const displayAssets = dynamicAssets.map(asset => {
+    if (asset.id === "etf") {
+      return { 
+        ...asset, 
+        payout: Math.round(additionalMonthlyPayoutNominal), 
+        accumulatedValue: Math.round(capitalAtRetirement),
+        accumulatedLabel: "Endkapital" // <-- Prognostiziert entfernt
+      };
+    }
+    return asset;
+  });
+
+  // SVG Progress Ring Berechnungen
+  const percentage = Math.round((realPurchasingPowerMonthly / targetPensionReal[0]) * 100);
+  const cappedPercentage = Math.min(percentage, 100);
+  const ringRadius = 80;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringStrokeOffset = ringCircumference - (cappedPercentage / 100) * ringCircumference;
+
   useEffect(() => {
     if (isPositive && !hasShownSuccessToast && activeView === 'dashboard') {
       setNotification("Glückwunsch! Deine Rentenlücke ist geschlossen. 🎯");
       setHasShownSuccessToast(true);
       setShowConfetti(true);
       
-      // Räumt das Konfetti nach 4.5 Sekunden wieder auf
       setTimeout(() => setShowConfetti(false), 4500);
       setTimeout(() => setNotification(null), 5500);
     } else if (!isPositive && hasShownSuccessToast) {
@@ -254,16 +253,9 @@ export default function App() {
     return (
       <div
         className="min-h-screen flex flex-col text-slate-200 max-w-[430px] mx-auto font-sans relative px-6 py-12 justify-center items-center text-center animate-in fade-in duration-500"
-        style={{
-          backgroundImage: "url('/Senior-woman-standing-on-surfboard.jpg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
+        style={{ backgroundImage: "url('/Senior-woman-standing-on-surfboard.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
       >
-        {/* dunkle Overlay für bessere Lesbarkeit */}
-        <div className="absolute inset-0 bg-slate-950/75" />
-
+        <div className="absolute inset-0 bg-slate-950/80" />
         <div className="relative z-10 w-full">
           <div className="w-24 h-24 mx-auto bg-indigo-500/10 rounded-3xl flex items-center justify-center mb-8 border border-indigo-500/20 shadow-2xl">
             <TrendingUp size={48} className="text-indigo-400" strokeWidth={2.5} />
@@ -273,11 +265,11 @@ export default function App() {
             Deine Altersvorsorge. Endlich verständlich, komplett digital und gebündelt in einer App.
           </p>
           <div className="w-full space-y-4 mt-8">
-            <button onClick={() => setActiveView('aionboarding')} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors shadow-lg shadow-indigo-500/25 cursor-pointer">
-              Jetzt starten
+            <button onClick={() => setActiveView('aionboarding')} className="w-full flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors shadow-lg shadow-indigo-500/25 cursor-pointer">
+              <Sparkles size={18} /> Jetzt starten
             </button>
-            <button onClick={() => setActiveView('onboarding')} className="w-full bg-transparent border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-white font-bold text-[13px] py-4 rounded-xl transition-colors cursor-pointer">
-              Demo-Profile (Personas)
+            <button onClick={() => setActiveView('onboarding')} className="w-full flex justify-center items-center gap-2 bg-transparent border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-white font-bold text-[13px] py-4 rounded-xl transition-colors cursor-pointer">
+              <Users size={18} /> Demo-Profile (Personas)
             </button>
           </div>
         </div>
@@ -303,7 +295,6 @@ export default function App() {
   return (
     <div className="bg-slate-950 min-h-screen text-slate-200 max-w-[430px] mx-auto font-sans overflow-x-hidden relative">
       
-      {/* Konfetti rendern, wenn Status true ist */}
       {showConfetti && <Confetti />}
 
       {notification && (
@@ -334,22 +325,44 @@ export default function App() {
             </div>
           </div>
 
-          <div className="px-6 pt-8 pb-8">
-            <p className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 mb-3">Reale Kaufkraft (heutiger Wert)</p>
-            <div className="text-[44px] font-black tracking-tight leading-none text-white mb-2 flex flex-wrap items-baseline gap-2 transition-all duration-300">
-              € {realPurchasingPowerMonthly.toLocaleString("de-DE")}
-              <span className={`text-[22px] font-semibold transition-colors duration-500 ${isPositive ? 'text-indigo-400' : 'text-rose-400'}`}>/ Monat</span>
-            </div>
-            <p className="text-[13px] font-medium text-slate-400 mb-5">
-              Nominale Auszahlung mit {retirementAge[0]}: <span className="text-white font-semibold">€ {Math.round(totalNominalMonthly).toLocaleString("de-DE")}</span>
+          {/* NEU: Erklärender Text & Titel über dem Ring für Anfänger */}
+          <div className="px-6 pt-8 pb-2 text-center">
+            <h2 className="text-2xl font-black text-white tracking-tight">Deine Rente mit {retirementAge[0]}</h2>
+            <p className="text-[13px] text-slate-400 mt-1.5 leading-relaxed">
+              So viel Geld hast du im Alter jeden Monat zur Verfügung. <br className="hidden sm:block"/>(Inflation ist bereits abgezogen)
             </p>
+          </div>
 
-            <div className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-bold border transition-colors ${isPositive ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
-              {isPositive ? "+" : ""}€ {Math.abs(diff).toLocaleString("de-DE")} {isPositive ? "über dem Ziel" : "unter dem Ziel"}
+          <div className="flex flex-col items-center justify-center py-6 px-6">
+            <div className="relative w-56 h-56 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90 absolute inset-0">
+                <circle cx="112" cy="112" r={ringRadius} stroke="currentColor" strokeWidth="14" fill="transparent" className="text-slate-800" />
+                <circle 
+                  cx="112" cy="112" r={ringRadius} 
+                  stroke="currentColor" strokeWidth="14" fill="transparent"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringStrokeOffset}
+                  strokeLinecap="round"
+                  className={isPositive ? "text-emerald-400 transition-all duration-1000 ease-out" : "text-indigo-500 transition-all duration-1000 ease-out"}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Mtl. Auszahlung</span>
+                <span className="text-4xl font-black text-white">€ {realPurchasingPowerMonthly.toLocaleString('de-DE')}</span>
+                <span className="text-[11px] text-slate-500 mt-1 font-medium">Ziel: € {targetPensionReal[0].toLocaleString('de-DE')}</span>
+              </div>
             </div>
+            
+            <div className={`mt-6 px-4 py-1.5 rounded-full text-[13px] font-bold flex items-center gap-1.5 shadow-sm ${isPositive ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+              {isPositive ? <CheckCircle2 size={16} /> : <TrendingUp size={16} />} 
+              {percentage}% vom Ziel erreicht
+            </div>
+          </div>
 
-            <div className="mt-7 flex justify-between gap-2 border-t border-slate-800 pt-5">
-              {[{ label: "Gesamtvermögen", value: `€ ${(totalNetWorthAtRetirement / 1000000).toFixed(2)}M` }, { label: "Aufgebraucht mit", value: `Alter ${activeLifeExpectancy}` }, { label: "Wunschrente", value: `€ ${targetPensionReal[0].toLocaleString("de-DE")}` }].map((stat) => (
+          <div className="px-6 pb-6">
+            {/* Top 20% Banner wurde hier gelöscht */}
+            <div className="flex justify-between gap-2 border-t border-slate-800 pt-5">
+              {[{ label: "Gesamtvermögen", value: `€ ${(totalNetWorthAtRetirement / 1000000).toFixed(2)}M` }, { label: "Reicht bis Alter", value: `${activeLifeExpectancy}+` }, { label: "Sparrate", value: `€ ${monthlyContribution[0]}` }].map((stat) => (
                 <div key={stat.label}>
                   <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase mb-1">{stat.label}</p>
                   <p className="text-[15px] font-extrabold text-white">{stat.value}</p>
@@ -358,37 +371,18 @@ export default function App() {
             </div>
           </div>
 
-          <div className="pb-4">
-            <div className="h-[180px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={wealthData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                  <Tooltip content={<CustomTooltip />} cursor={false} />
-                  <ReferenceLine y={0} stroke="#334155" strokeDasharray="3 3" />
-                  <ReferenceLine x={retirementAge[0]} stroke="#6366f1" strokeOpacity={0.4} strokeDasharray="3 3" /> 
-                  <defs>
-                    <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="expected" stroke="#6366f1" strokeWidth={2.5} fill="url(#colorExpected)" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-between px-6 pt-2">
-              <span className="text-[11px] text-slate-500 font-medium">Heute ({currentAge})</span>
-              <span className="text-[11px] text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded-md">Rente ({retirementAge[0]})</span>
-              <span className="text-[11px] text-slate-500 font-medium">Ende ({activeLifeExpectancy})</span>
-            </div>
-          </div>
+          <AssetBreakdown assets={displayAssets} onUpdateAsset={handleUpdateAsset} combinedMonthlyNominal={combinedMonthlyNominal} />
 
-          <AssetBreakdown assets={dynamicAssets} onUpdateAsset={handleUpdateAsset} combinedMonthlyNominal={combinedMonthlyNominal} />
-
-          <div className="px-6 pt-8 pb-8">
-            <button onClick={() => setActiveView('optimize')} className="w-full bg-indigo-500 hover:bg-indigo-400 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer shadow-lg shadow-indigo-500/20">
-              Lücke jetzt schließen
-            </button>
-            <p className="text-center text-xs text-slate-500 mt-3">Basierend auf DRV-Daten und historischen ETF-Renditen</p>
+          <div className="px-6 pt-6 pb-8">
+            {isPositive ? (
+              <button onClick={() => {}} className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-default">
+                Lücke geschlossen! Du kannst dich zurücklehnen.
+              </button>
+            ) : (
+              <button onClick={() => setActiveView('optimize')} className="w-full bg-indigo-500 hover:bg-indigo-400 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer shadow-lg shadow-indigo-500/20">
+                Lücke jetzt schließen
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -406,7 +400,7 @@ export default function App() {
             lifeExpectancy={lifeExpectancy} setLifeExpectancy={setLifeExpectancy}
             targetPension={targetPensionReal} setTargetPension={setTargetPensionReal}
             dynamicSavings={dynamicSavings} setDynamicSavings={setDynamicSavings}
-            projectedMonthly={realPurchasingPowerMonthly} diff={diff} isPositive={isPositive} yearsLeft={yearsToRetire}
+            projectedMonthly={realPurchasingPowerMonthly} diff={diff} isPositive={isPositive} yearsLeft={retirementAge[0] - currentAge}
             onNavigateToPersonalData={() => setActiveView('personalData')}
             onSyncComplete={handleDataSync}
           />

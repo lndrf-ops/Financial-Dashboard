@@ -9,7 +9,6 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
   const [inputPayout, setInputPayout] = useState("");
   const [inputAccumulated, setInputAccumulated] = useState("");
   
-  // NEU: Accordion States
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
 
@@ -33,7 +32,6 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
     <>
       <div className="px-6 mt-4 mb-6">
         
-        {/* NEU: Der Haupt-Button für das Accordion */}
         <button 
           onClick={() => setIsExpanded(!isExpanded)} 
           className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm cursor-pointer transition-colors hover:bg-slate-800/80"
@@ -43,14 +41,14 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
               <Wallet size={18} className="text-indigo-400" />
             </div>
             <div className="text-left">
-              <p className="text-[11px] font-semibold tracking-widest uppercase text-slate-500 mb-0.5">Basisrente (Nominal)</p>
-              <p className="text-lg font-black text-white">€ {combinedMonthlyNominal.toLocaleString("de-DE", { minimumFractionDigits: 2 })}</p>
+              <p className="text-[11px] font-semibold tracking-widest uppercase text-slate-500 mb-0.5">Rente zur Auszahlung (Nominal)</p>
+              {/* Quick Fix: Runden auf ganze Zahlen, keine 7.535,447 mehr */}
+              <p className="text-lg font-black text-white">€ {combinedMonthlyNominal.toLocaleString("de-DE", { maximumFractionDigits: 0 })}</p>
             </div>
           </div>
           <ChevronDown size={20} className={`text-slate-500 transition-transform duration-300 ${isExpanded ? "rotate-180 text-indigo-400" : ""}`} />
         </button>
 
-        {/* NEU: Der aufklappbare Bereich (Accordion Content) */}
         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? "max-h-[1000px] opacity-100 mt-3" : "max-h-0 opacity-0"}`}>
           <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900 shadow-inner">
             {visibleAssets.map((asset, i) => {
@@ -68,9 +66,9 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
                   </div>
                   <div className="text-right ml-3 shrink-0">
                     <p className="text-base font-extrabold text-white mb-0.5">
-                      {isCalculated ? "Berechnet" : `€ ${asset.payout.toLocaleString("de-DE", { minimumFractionDigits: 2 })}`}
+                      {isCalculated ? "Berechnet" : `€ ${asset.payout.toLocaleString("de-DE", { maximumFractionDigits: 0 })}`}
                     </p>
-                    <p className="text-[11px] text-slate-400">€ {asset.accumulatedValue.toLocaleString("de-DE")} {asset.accumulatedLabel}</p>
+                    <p className="text-[11px] text-slate-400">€ {asset.accumulatedValue.toLocaleString("de-DE", { maximumFractionDigits: 0 })} {asset.accumulatedLabel}</p>
                   </div>
                   <ChevronRight size={14} className="text-slate-500 ml-2.5 shrink-0" />
                 </div>
@@ -100,7 +98,6 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
 
       <div className="mx-6 h-px bg-slate-800" />
 
-      {/* Bearbeiten-Modal */}
       {editingAsset && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 relative shadow-2xl">
