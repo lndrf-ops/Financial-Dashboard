@@ -1,5 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, ArrowLeft, ChevronRight, UploadCloud, FileText, Building, Briefcase, X, Maximize2 } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import {
+  Loader2, ArrowLeft, ChevronRight, FileText, X, EyeOff, AlertTriangle,
+  CheckCircle2, GraduationCap, Wrench, HelpCircle, Calculator,
+  TrendingUp, UploadCloud, Building2, Shield,
+} from "lucide-react";
+
+export interface PensionAsset {
+  type: 'drv' | 'bAV' | 'riester' | 'ruerup' | 'private';
+  provider: string;
+  monthlyPayout: number;
+  inflationAdjusted: boolean;
+}
 
 export interface AIOnboardingData {
   age: number;
@@ -7,8 +18,8 @@ export interface AIOnboardingData {
   targetPension: number;
   initialCapital: number;
   income: number;
-  drvNetto: number;
-  bavPayout: number;
+  pensionAssets: PensionAsset[];
+  drvBonus: number;
 }
 
 interface AIOnboardingProps {
@@ -16,61 +27,29 @@ interface AIOnboardingProps {
   onSwitchToPersonas: () => void;
 }
 
-const AGES = Array.from({ length: 51 }, (_, i) => i + 16);
-const INCOMES = Array.from({ length: 66 }, (_, i) => (i + 5) * 100); // 500–7000
-const SAVINGS = Array.from({ length: 101 }, (_, i) => i * 10); // 0–1000
+// Mock-Werte aus dem TR-Ökosystem
+const TR_AGE = 28;
+const TR_SAVINGS = 150;
+
+const MOCK_DETECTED: PensionAsset[] = [
+  { type: 'drv',     provider: 'Deutsche Rentenversicherung', monthlyPayout: 1450, inflationAdjusted: true  },
+  { type: 'bAV',     provider: 'Allianz',                    monthlyPayout: 280,  inflationAdjusted: false },
+  { type: 'riester', provider: 'Deka Investment',            monthlyPayout: 115,  inflationAdjusted: false },
+];
+
+const DOC_CATEGORIES = [
+  { label: 'Gesetzlich',  docs: ['DRV Renteninformation', 'Beamten-Versorgungsauskunft'] },
+  { label: 'Betrieblich', docs: ['bAV Standmitteilung', 'VBL-Nachweis', 'Direktversicherung'] },
+  { label: 'Privat',      docs: ['Riester-/Rürup-Bescheinigung', 'Private Lebensversicherung', 'Externer Depotauszug'] },
+];
+
+const INCOMES = Array.from({ length: 66 }, (_, i) => (i + 5) * 100);
 const ITEM_H = 64;
 
-function AgeDrumPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const idx = AGES.indexOf(value);
-    el.scrollTop = idx * ITEM_H;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleScroll = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    clearTimeout((handleScroll as any)._t);
-    (handleScroll as any)._t = setTimeout(() => {
-      const idx = Math.round(el.scrollTop / ITEM_H);
-      const snapped = Math.max(0, Math.min(idx, AGES.length - 1));
-      el.scrollTop = snapped * ITEM_H;
-      onChange(AGES[snapped]);
-    }, 80);
-  }, [onChange]);
-
-  return (
-    <div className="flex items-center gap-4 select-none">
-      <div className="relative h-[192px] w-28 overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-slate-950 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 z-10 border-y-2 border-indigo-500/60 bg-indigo-500/5 rounded-xl" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 z-10 bg-gradient-to-t from-slate-950 to-transparent" />
-        <div
-          ref={ref}
-          onScroll={handleScroll}
-          className="h-full overflow-y-scroll no-scrollbar"
-          style={{ scrollSnapType: 'y mandatory' }}
-        >
-          <div style={{ height: ITEM_H * 2 }} />
-          {AGES.map((age) => (
-            <div
-              key={age}
-              style={{ height: ITEM_H, scrollSnapAlign: 'center' }}
-              className={`flex items-center justify-center font-black text-4xl transition-colors ${age === value ? 'text-white' : 'text-slate-600'}`}
-            >
-              {age}
-            </div>
-          ))}
-          <div style={{ height: ITEM_H * 2 }} />
-        </div>
-      </div>
-      <span className="text-2xl font-bold text-slate-500">Jahre</span>
-    </div>
-  );
+function getDefaultTargetByAge(age: number): number {
+  if (age < 35) return 2000;
+  if (age < 50) return 2400;
+  return 2800;
 }
 
 function IncomeDrumPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -80,7 +59,7 @@ function IncomeDrumPicker({ value, onChange }: { value: number; onChange: (v: nu
     const el = ref.current;
     if (!el) return;
     const idx = INCOMES.indexOf(value);
-    el.scrollTop = (idx < 0 ? 0 : idx) * ITEM_H;
+    el.scrollTop = (idx < 0 ? 1 : idx + 1) * ITEM_H;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScroll = useCallback(() => {
@@ -88,9 +67,9 @@ function IncomeDrumPicker({ value, onChange }: { value: number; onChange: (v: nu
     if (!el) return;
     clearTimeout((handleScroll as any)._t);
     (handleScroll as any)._t = setTimeout(() => {
-      const idx = Math.round(el.scrollTop / ITEM_H);
+      const idx = Math.round(el.scrollTop / ITEM_H) - 1;
       const snapped = Math.max(0, Math.min(idx, INCOMES.length - 1));
-      el.scrollTop = snapped * ITEM_H;
+      el.scrollTop = (snapped + 1) * ITEM_H;
       onChange(INCOMES[snapped]);
     }, 80);
   }, [onChange]);
@@ -98,9 +77,9 @@ function IncomeDrumPicker({ value, onChange }: { value: number; onChange: (v: nu
   return (
     <div className="flex items-center gap-4 select-none">
       <div className="relative h-[192px] w-36 overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-slate-950 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 z-10 border-y-2 border-indigo-500/60 bg-indigo-500/5 rounded-xl" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 z-10 bg-gradient-to-t from-slate-950 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-white to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 z-10 border-y-2 border-black/20 bg-black/[0.03] rounded-xl" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 z-10 bg-gradient-to-t from-white to-transparent" />
         <div
           ref={ref}
           onScroll={handleScroll}
@@ -112,7 +91,7 @@ function IncomeDrumPicker({ value, onChange }: { value: number; onChange: (v: nu
             <div
               key={inc}
               style={{ height: ITEM_H, scrollSnapAlign: 'center' }}
-              className={`flex items-center justify-center font-black text-3xl transition-colors ${inc === value ? 'text-white' : 'text-slate-600'}`}
+              className={`flex items-center justify-center font-black text-3xl transition-colors ${inc === value ? 'text-black' : 'text-gray-300'}`}
             >
               {inc.toLocaleString('de-DE')}
             </div>
@@ -120,59 +99,7 @@ function IncomeDrumPicker({ value, onChange }: { value: number; onChange: (v: nu
           <div style={{ height: ITEM_H * 2 }} />
         </div>
       </div>
-      <span className="text-2xl font-bold text-slate-500">€ / Monat</span>
-    </div>
-  );
-}
-
-function SavingsDrumPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const idx = SAVINGS.indexOf(value);
-    el.scrollTop = (idx < 0 ? 0 : idx) * ITEM_H;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleScroll = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    clearTimeout((handleScroll as any)._t);
-    (handleScroll as any)._t = setTimeout(() => {
-      const idx = Math.round(el.scrollTop / ITEM_H);
-      const snapped = Math.max(0, Math.min(idx, SAVINGS.length - 1));
-      el.scrollTop = snapped * ITEM_H;
-      onChange(SAVINGS[snapped]);
-    }, 80);
-  }, [onChange]);
-
-  return (
-    <div className="flex items-center gap-4 select-none">
-      <div className="relative h-[192px] w-24 overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-slate-950 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 z-10 border-y-2 border-indigo-500/60 bg-indigo-500/5 rounded-xl" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 z-10 bg-gradient-to-t from-slate-950 to-transparent" />
-        <div
-          ref={ref}
-          onScroll={handleScroll}
-          className="h-full overflow-y-scroll no-scrollbar"
-          style={{ scrollSnapType: 'y mandatory' }}
-        >
-          <div style={{ height: ITEM_H * 2 }} />
-          {SAVINGS.map((s) => (
-            <div
-              key={s}
-              style={{ height: ITEM_H, scrollSnapAlign: 'center' }}
-              className={`flex items-center justify-center font-black text-4xl transition-colors ${s === value ? 'text-white' : 'text-slate-600'}`}
-            >
-              {s}
-            </div>
-          ))}
-          <div style={{ height: ITEM_H * 2 }} />
-        </div>
-      </div>
-      <span className="text-2xl font-bold text-slate-500">€ / Monat</span>
+      <span className="text-2xl font-bold text-gray-400">€ / Monat</span>
     </div>
   );
 }
@@ -180,130 +107,155 @@ function SavingsDrumPicker({ value, onChange }: { value: number; onChange: (v: n
 export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingProps) {
   const [step, setStep] = useState(1);
 
-  // Data
-  const [age, setAge] = useState<number>(0);
+  // TR-Profil ist bereits bekannt — kein manueller Input nötig
+  const age = TR_AGE;
+  const monthlySavings = TR_SAVINGS;
+
+  const [syncStep, setSyncStep] = useState(0);
   const [importMethod, setImportMethod] = useState<'upload' | 'manual' | null>(null);
   const [income, setIncome] = useState<number>(3000);
-  const [drvNetto, setDrvNetto] = useState<number>(1450);
-  const [bavPayout, setBavPayout] = useState<number>(0);
   const [initialCapital] = useState<number>(0);
-  const [monthlySavings, setMonthlySavings] = useState<number>(0);
-  const [foundBonus, setFoundBonus] = useState(0);
+  const [targetPension, setTargetPension] = useState(getDefaultTargetByAge(TR_AGE));
+  const [pensionAssets, setPensionAssets] = useState<PensionAsset[]>([]);
 
-  // UI
-  const [customAgeInput, setCustomAgeInput] = useState("30");
+  // Dropzone states
+  const [dropState, setDropState] = useState<'idle' | 'processing' | 'done'>('idle');
+  const [processingStep, setProcessingStep] = useState(0); // 0=idle, 1/2/3=each doc
+  const [showDocModal, setShowDocModal] = useState(false);
+
   const [customIncomeInput, setCustomIncomeInput] = useState("3000");
-  const [customMonthlyInput, setCustomMonthlyInput] = useState("150");
-  const [showCustomMonthly, setShowCustomMonthly] = useState(false);
-  const [isUploadingDRV, setIsUploadingDRV] = useState(false);
-  const [isUploadingBAV, setIsUploadingBAV] = useState(false);
   const [loadingText, setLoadingText] = useState("Analysiere Daten...");
-  const [livePension, setLivePension] = useState(0);
-  const [liveBav, setLiveBav] = useState(0);
-
-  const [fullscreenImage, setFullscreenImage] = useState<{ src: string; label: string } | null>(null);
-
-  // Selection states
   const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null);
-  const [selectedDRVOption, setSelectedDRVOption] = useState<'upload' | 'manual' | null>(null);
   const [selectedBonusOption, setSelectedBonusOption] = useState<'yes' | 'no' | null>(null);
-  const [selectedBavOption, setSelectedBavOption] = useState<'upload' | 'none' | null>(null);
-  const [selectedSavingsAmount, setSelectedSavingsAmount] = useState<number | null>(null);
+  const [foundBonus, setFoundBonus] = useState(0);
+  const [showBonusInfo, setShowBonusInfo] = useState(false);
 
-  const totalSteps = 8;
+  const totalSteps = 6;
   const progress = (step / totalSteps) * 100;
 
+  // Schritt 1: TR-Profil Sync — animiert, dann automatisch weiter
   useEffect(() => {
-    if (step === 8) {
-      const t1 = setTimeout(() => setLoadingText("Berechne Steuern & Inflation..."), 800);
-      const t2 = setTimeout(() => setLoadingText("Konsolidiere alle Rentenquellen..."), 1600);
-      const t3 = setTimeout(() => setLoadingText("Dein Dashboard ist bereit!"), 2400);
-      const t4 = setTimeout(() => {
-        onComplete({ age: age || 30, monthlySavings, targetPension: 2500, initialCapital, income, drvNetto: drvNetto + foundBonus, bavPayout });
-      }, 2500);
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
-    }
-  }, [step, age, monthlySavings, initialCapital, income, drvNetto, bavPayout, foundBonus, onComplete]);
+    if (step !== 1) return;
+    const t1 = setTimeout(() => setSyncStep(1), 800);
+    const t2 = setTimeout(() => setSyncStep(2), 1700);
+    const t3 = setTimeout(() => setStep(2), 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [step]);
+
+  // Schritt 3: Dropzone-Verarbeitungsanimation
+  useEffect(() => {
+    if (step !== 3 || dropState !== 'processing') return;
+    const t1 = setTimeout(() => setProcessingStep(1), 1000);
+    const t2 = setTimeout(() => setProcessingStep(2), 2200);
+    const t3 = setTimeout(() => setProcessingStep(3), 3400);
+    const t4 = setTimeout(() => {
+      setDropState('done');
+      setPensionAssets(MOCK_DETECTED);
+    }, 4200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, [step, dropState]);
+
+  // Schritt 6: Finaler Ladescreen → Dashboard öffnen
+  useEffect(() => {
+    if (step !== 6) return;
+    const t1 = setTimeout(() => setLoadingText("Berechne Steuern & Inflation..."), 800);
+    const t2 = setTimeout(() => setLoadingText("Konsolidiere alle Rentenquellen..."), 1600);
+    const t3 = setTimeout(() => setLoadingText("Dein Dashboard ist bereit!"), 2400);
+    const t4 = setTimeout(() => {
+      const finalAssets = pensionAssets.map(a =>
+        a.type === 'drv' ? { ...a, monthlyPayout: a.monthlyPayout + foundBonus } : a
+      );
+      onComplete({ age, monthlySavings, targetPension, initialCapital, income, pensionAssets: finalAssets, drvBonus: foundBonus });
+    }, 2500);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, [step, age, monthlySavings, targetPension, initialCapital, income, pensionAssets, foundBonus, onComplete]);
 
   const handleNext = () => setStep(prev => prev + 1);
 
   const handleBack = () => {
-    if (showCustomMonthly) {
-      setShowCustomMonthly(false);
-      setSelectedSavingsAmount(null);
-    } else if (importMethod === 'manual') {
+    if (importMethod === 'manual') {
       setImportMethod(null);
-      setSelectedDRVOption(null);
-    } else if (step > 1) {
+    } else if (dropState !== 'idle') {
+      setDropState('idle');
+      setProcessingStep(0);
+      setPensionAssets([]);
+    } else if (step > 2) {
       setStep(prev => prev - 1);
     }
   };
 
-  const handleUploadScanDRV = () => {
-    setImportMethod('upload');
-    setIsUploadingDRV(true);
-    let current = 0;
-    const target = 1450;
-    const interval = setInterval(() => {
-      current += 65;
-      if (current >= target) { current = target; clearInterval(interval); }
-      setLivePension(current);
-    }, 80);
-    setTimeout(() => {
-      clearInterval(interval); setLivePension(target); setDrvNetto(target); setIsUploadingDRV(false); handleNext();
-    }, 3000);
-  };
+  const BottomNav = ({ onNext, nextDisabled = false, nextLabel = "Weiter", onBack, hideNext = false }: {
+    onNext?: () => void; nextDisabled?: boolean; nextLabel?: string; onBack?: () => void; hideNext?: boolean;
+  }) => (
+    <div className="flex gap-3">
+      {onBack
+        ? <button onClick={onBack} className="flex-none w-14 bg-[#F4F4F5] hover:bg-gray-200 text-black rounded-xl transition-colors cursor-pointer flex items-center justify-center">
+            <ArrowLeft size={20} />
+          </button>
+        : <div className="flex-none w-14" />
+      }
+      {!hideNext && (
+        <button onClick={onNext} disabled={nextDisabled} className="flex-1 bg-black hover:bg-gray-900 disabled:opacity-30 disabled:cursor-not-allowed text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer">
+          {nextLabel}
+        </button>
+      )}
+    </div>
+  );
 
-  const handleUploadScanBAV = () => {
-    setIsUploadingBAV(true);
-    let current = 0;
-    const target = 280;
-    const interval = setInterval(() => {
-      current += 15;
-      if (current >= target) { current = target; clearInterval(interval); }
-      setLiveBav(current);
-    }, 80);
-    setTimeout(() => {
-      clearInterval(interval); setLiveBav(target); setBavPayout(target); setIsUploadingBAV(false); handleNext();
-    }, 3000);
-  };
+  const OptionCard = ({ emoji, title, subtitle, onClick, selected = false, disabled = false }: {
+    emoji?: ReactNode; title: string; subtitle?: string; onClick: () => void; selected?: boolean; disabled?: boolean;
+  }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full border p-5 rounded-2xl flex items-center justify-between transition-all text-left group ${
+        selected
+          ? 'bg-black/[0.04] border-black'
+          : disabled
+            ? 'bg-[#F4F4F5] border-gray-200 opacity-40 cursor-not-allowed'
+            : 'bg-[#F9FAFB] border-gray-200 hover:border-gray-400 hover:bg-gray-100 cursor-pointer'
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        {emoji && <div className="flex items-center justify-center w-8 h-8 shrink-0 text-black">{emoji}</div>}
+        <div>
+          <h3 className="font-bold text-[15px] text-black">{title}</h3>
+          {subtitle && <p className="text-[12px] text-gray-500 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      <ChevronRight size={18} className={selected ? 'text-black' : 'text-gray-300 group-hover:text-gray-600 transition-colors'} />
+    </button>
+  );
 
-  // Compute nav config for the current step (null = hide nav)
   const navConfig = (() => {
-    if (isUploadingDRV || isUploadingBAV || step === 8) return null;
-    if (step === 1) return {
+    if (step === 1 || step === 6) return null;
+    if (step === 2) return {
       onNext: handleNext,
       nextDisabled: !selectedFeeling,
       nextLabel: "Weiter",
       onBack: onSwitchToPersonas,
     };
-    if (step === 2) return {
-      onNext: () => {
-        const v = parseInt(customAgeInput);
-        if (!isNaN(v) && v > 15 && v < 67) { setAge(v); handleNext(); }
-      },
-      nextDisabled: !customAgeInput || parseInt(customAgeInput) < 16,
-      nextLabel: "Weiter",
-      onBack: handleBack,
-    };
     if (step === 3 && importMethod === 'manual') return {
       onNext: () => {
         const v = parseInt(customIncomeInput);
-        if (!isNaN(v) && v > 0) { setIncome(v); setDrvNetto(Math.round(v * 0.45)); handleNext(); }
+        if (!isNaN(v) && v > 0) {
+          setIncome(v);
+          setTargetPension(Math.round(v * 0.8));
+          setPensionAssets([{ type: 'drv', provider: 'Schätzung via Gehalt', monthlyPayout: Math.round(v * 0.45), inflationAdjusted: true }]);
+          handleNext();
+        }
       },
       nextDisabled: !customIncomeInput || parseInt(customIncomeInput) <= 0,
       nextLabel: "Weiter",
       onBack: handleBack,
     };
-    if (step === 3) return {
-      onNext: () => {
-        if (selectedDRVOption === 'upload') handleUploadScanDRV();
-        else if (selectedDRVOption === 'manual') setImportMethod('manual');
-      },
-      nextDisabled: !selectedDRVOption,
-      nextLabel: "Weiter",
+    if (step === 3 && dropState === 'done') return {
+      onNext: handleNext,
+      nextDisabled: false,
+      nextLabel: "Werte übernehmen",
       onBack: handleBack,
     };
+    if (step === 3) return { onNext: undefined, nextDisabled: true, nextLabel: "Weiter", onBack: handleBack, hideNext: true };
     if (step === 4) return {
       onNext: () => {
         if (selectedBonusOption === 'yes') { setFoundBonus(85); handleNext(); }
@@ -313,350 +265,339 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
       nextLabel: "Weiter",
       onBack: handleBack,
     };
-    if (step === 5) return {
-      onNext: handleNext,
-      nextDisabled: false,
-      nextLabel: foundBonus > 0 ? "Weiter" : "Weiter",
-      onBack: handleBack,
-    };
-    if (step === 6) return {
-      onNext: () => {
-        if (selectedBavOption === 'upload') handleUploadScanBAV();
-        else if (selectedBavOption === 'none') { setBavPayout(0); handleNext(); }
-      },
-      nextDisabled: !selectedBavOption,
-      nextLabel: "Weiter",
-      onBack: handleBack,
-    };
-    if (step === 7 && showCustomMonthly) return {
-      onNext: () => {
-        const v = parseInt(customMonthlyInput);
-        if (!isNaN(v) && v >= 0) { setMonthlySavings(v); handleNext(); }
-      },
-      nextDisabled: !customMonthlyInput || parseInt(customMonthlyInput) < 0,
-      nextLabel: "Weiter",
-      onBack: handleBack,
-    };
-    if (step === 7) return {
-      onNext: () => {
-        if (selectedSavingsAmount !== null && selectedSavingsAmount >= 0) {
-          setMonthlySavings(selectedSavingsAmount);
-          handleNext();
-        }
-      },
-      nextDisabled: selectedSavingsAmount === null || selectedSavingsAmount < 0,
-      nextLabel: "Weiter",
-      onBack: handleBack,
-    };
+    if (step === 5) return { onNext: handleNext, nextDisabled: false, nextLabel: "Weiter zum Dashboard", onBack: handleBack };
     return null;
   })();
 
-  const BottomNav = ({ onNext, nextDisabled = false, nextLabel = "Weiter", onBack }: {
-    onNext: () => void; nextDisabled?: boolean; nextLabel?: string; onBack?: () => void;
-  }) => (
-    <div className="flex gap-3">
-      {onBack
-        ? <button onClick={onBack} className="flex-none w-14 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors cursor-pointer flex items-center justify-center">
-            <ArrowLeft size={20} />
-          </button>
-        : <div className="flex-none w-14" />
-      }
-      <button onClick={onNext} disabled={nextDisabled} className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer">
-        {nextLabel}
-      </button>
-    </div>
-  );
-
-  const OptionCard = ({ emoji, title, subtitle, onClick, selected = false, disabled = false }: {
-    emoji?: string; title: string; subtitle?: string; onClick: () => void; selected?: boolean; disabled?: boolean;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`w-full border p-5 rounded-2xl flex items-center justify-between transition-all text-left group ${
-        selected
-          ? 'bg-indigo-500/10 border-indigo-500'
-          : disabled
-            ? 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'
-            : 'bg-slate-900 border-slate-800 hover:border-indigo-500 hover:bg-slate-800/80 cursor-pointer'
-      }`}
-    >
-      <div className="flex items-center gap-4">
-        {emoji && <span className="text-2xl flex items-center justify-center w-8 h-8">{emoji}</span>}
-        <div>
-          <h3 className="font-bold text-[15px] text-white">{title}</h3>
-          {subtitle && <p className="text-[12px] text-slate-400 mt-0.5">{subtitle}</p>}
-        </div>
-      </div>
-      <ChevronRight size={18} className={selected ? 'text-indigo-400' : 'text-slate-600 group-hover:text-indigo-400 transition-colors'} />
-    </button>
-  );
-
   return (
-    <div className="bg-slate-950 h-screen flex flex-col text-slate-200 max-w-[430px] mx-auto font-sans relative overflow-hidden">
-      {/* Top bar */}
-      <div className="flex-none bg-slate-950 px-6 py-4">
-        {step < 8 && (
-          <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+    <div className="bg-white h-screen flex flex-col text-gray-900 max-w-[430px] mx-auto font-sans relative overflow-hidden">
+
+      {/* Progress Bar */}
+      <div className="flex-none bg-white px-6 py-4">
+        {step > 1 && step < 6 && (
+          <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-black transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
 
-      {/* Scrollable step content */}
       <div className="flex-1 overflow-y-auto flex flex-col px-6 pt-6 min-h-0">
 
-        {/* STEP 1 */}
+        {/* SCHRITT 1: TR Profil-Sync (auto) */}
         {step === 1 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Altersvorsorge. Ein lästiges Thema.</h1>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Wie fühlst du dich, wenn du an deine Rente denkst?</p>
-            <div className="space-y-3">
-              <OptionCard emoji="🙈" title="Ich verdränge es" subtitle="Ist mir noch zu weit weg" selected={selectedFeeling === 'ignore'} onClick={() => setSelectedFeeling('ignore')} />
-              <OptionCard emoji="😰" title="Macht mir Sorgen" subtitle="Ich habe Angst vor der Lücke" selected={selectedFeeling === 'worried'} onClick={() => setSelectedFeeling('worried')} />
-              <OptionCard emoji="😎" title="Bin entspannt" subtitle="Ich habe bereits einen Plan" selected={selectedFeeling === 'relaxed'} onClick={() => setSelectedFeeling('relaxed')} />
+          <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in duration-500">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden mb-8 border border-gray-200 shadow-sm">
+              <img src="/traderepublic_logo.jpg" alt="Trade Republic" className="w-full h-full object-cover" />
+            </div>
+            <h2 className="text-xl font-black text-black mb-1 text-center">Trade Republic Profil</h2>
+            <p className="text-[13px] text-gray-500 mb-10 text-center">Deine Daten werden synchronisiert...</p>
+            <div className="w-full space-y-3">
+              <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${syncStep >= 1 ? 'bg-emerald-50 border-emerald-200' : 'bg-[#F9FAFB] border-gray-200 opacity-50'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${syncStep >= 1 ? 'bg-emerald-100' : 'bg-[#F4F4F5]'}`}>
+                  {syncStep >= 1
+                    ? <CheckCircle2 size={17} className="text-emerald-600" />
+                    : <Loader2 size={17} className="text-gray-400 animate-spin" />}
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-black leading-tight">Alter erkannt</p>
+                  {syncStep >= 1 && <p className="text-[12px] text-emerald-600 font-semibold mt-0.5 animate-in fade-in duration-300">{TR_AGE} Jahre</p>}
+                </div>
+              </div>
+              <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${syncStep >= 2 ? 'bg-emerald-50 border-emerald-200' : 'bg-[#F9FAFB] border-gray-200 opacity-50'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${syncStep >= 2 ? 'bg-emerald-100' : 'bg-[#F4F4F5]'}`}>
+                  {syncStep >= 2
+                    ? <CheckCircle2 size={17} className="text-emerald-600" />
+                    : <Loader2 size={17} className="text-gray-400 animate-spin" />}
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-black leading-tight">Aktive Sparpläne importiert</p>
+                  {syncStep >= 2 && <p className="text-[12px] text-emerald-600 font-semibold mt-0.5 animate-in fade-in duration-300">{TR_SAVINGS} €/Mtl.</p>}
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* STEP 2: Age */}
+        {/* SCHRITT 2: Gefühl */}
         {step === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Verstanden. Lass uns Licht ins Dunkel bringen.</h1>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Wie alt bist du aktuell?</p>
-            <div className="flex-1 flex items-center justify-center">
-              <AgeDrumPicker value={parseInt(customAgeInput) || 30} onChange={(v) => setCustomAgeInput(String(v))} />
+            <h1 className="text-2xl font-black text-black mb-3 leading-tight">Altersvorsorge. Ein lästiges Thema.</h1>
+            <p className="text-sm text-gray-500 mb-8 leading-relaxed">Wie fühlst du dich, wenn du an deine Rente denkst?</p>
+            <div className="space-y-3">
+              <OptionCard emoji={<EyeOff size={20} />} title="Ich verdränge es" subtitle="Ist mir noch zu weit weg" selected={selectedFeeling === 'ignore'} onClick={() => setSelectedFeeling('ignore')} />
+              <OptionCard emoji={<AlertTriangle size={20} />} title="Macht mir Sorgen" subtitle="Ich habe Angst vor der Lücke" selected={selectedFeeling === 'worried'} onClick={() => setSelectedFeeling('worried')} />
+              <OptionCard emoji={<CheckCircle2 size={20} />} title="Bin entspannt" subtitle="Ich habe bereits einen Plan" selected={selectedFeeling === 'relaxed'} onClick={() => setSelectedFeeling('relaxed')} />
             </div>
           </div>
         )}
 
-        {/* STEP 3: DRV selection */}
+        {/* SCHRITT 3: Magic Dropzone */}
         {step === 3 && importMethod !== 'manual' && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            {!isUploadingDRV ? (
+
+            {dropState === 'idle' && (
               <>
-                <h1 className="text-2xl font-black text-white mb-3 leading-tight">Deine gesetzliche Rente.</h1>
-                <p className="text-sm text-slate-400 mb-5 leading-relaxed">Der wichtigste Grundbaustein. Hast du deine Renteninformation zur Hand?</p>
-                <button onClick={() => setFullscreenImage({ src: '/Renteninformation.webp', label: 'Renteninformation' })} className="rounded-2xl overflow-hidden border border-slate-800 mb-5 relative w-full cursor-pointer group">
-                  <img src="/Renteninformation.webp" alt="Beispiel Renteninformation" className="w-full object-cover max-h-40 object-top" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
-                  <p className="absolute bottom-2 left-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Dieses Dokument benötigst du</p>
-                  <div className="absolute top-2 right-2 w-7 h-7 bg-slate-950/60 rounded-lg flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                    <Maximize2 size={13} className="text-white" />
+                <h1 className="text-2xl font-black text-black mb-2 leading-tight">Deine Vorsorgepapiere.</h1>
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                  Lass unsere KI alle Rentendokumente auf einmal analysieren.
+                </p>
+
+                {/* Drop-Area */}
+                <button
+                  onClick={() => { setDropState('processing'); setProcessingStep(0); }}
+                  className="w-full border-2 border-dashed border-gray-300 hover:border-black rounded-3xl flex flex-col items-center justify-center py-12 px-6 gap-4 transition-all group cursor-pointer mb-4 bg-[#FAFAFA] hover:bg-gray-50"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-[#F4F4F5] group-hover:bg-black flex items-center justify-center transition-all duration-300">
+                    <UploadCloud size={26} className="text-gray-400 group-hover:text-white transition-colors" />
                   </div>
+                  <div className="text-center">
+                    <p className="text-[15px] font-bold text-black mb-1">
+                      Zieh einfach alles hier rein, was nach Rente aussieht.
+                    </p>
+                    <p className="text-[12px] text-gray-400">Unsere KI erledigt den Rest.</p>
+                  </div>
+                  <span className="text-[11px] bg-[#F4F4F5] group-hover:bg-black group-hover:text-white px-3 py-1.5 rounded-full font-bold text-gray-500 transition-all">
+                    Zum Simulieren klicken
+                  </span>
                 </button>
-                <div className="space-y-3">
-                  <div
-                    onClick={() => setSelectedDRVOption('upload')}
-                    className={`w-full relative overflow-hidden p-5 rounded-2xl flex items-center justify-between transition-all cursor-pointer group border ${
-                      selectedDRVOption === 'upload'
-                        ? 'bg-indigo-500/20 border-indigo-500'
-                        : 'bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20'
-                    }`}
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-2xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                        <UploadCloud size={20} className="text-indigo-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-[15px] text-white">Dokument scannen</h3>
-                        <p className="text-[11px] text-indigo-300/80 mt-0.5">Empfohlen • DRV-Scan mit KI</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} className="text-indigo-400 relative z-10" />
-                  </div>
-                  <div className="flex items-center gap-3 my-4">
-                    <div className="h-px bg-slate-800 flex-1" />
-                    <span className="text-[10px] uppercase tracking-widest text-slate-600 font-bold">Oder manuell</span>
-                    <div className="h-px bg-slate-800 flex-1" />
-                  </div>
-                  <OptionCard emoji="💰" title="Über Gehalt schätzen" subtitle="Geht schneller, aber ungenauer" selected={selectedDRVOption === 'manual'} onClick={() => setSelectedDRVOption('manual')} />
+
+                {/* Info-Link */}
+                <button
+                  onClick={() => setShowDocModal(true)}
+                  className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-black transition-colors mx-auto mb-6 cursor-pointer"
+                >
+                  <HelpCircle size={13} />
+                  Welche Dokumente kann ich hochladen?
+                </button>
+
+                {/* Separator */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-px bg-gray-200 flex-1" />
+                  <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Oder</span>
+                  <div className="h-px bg-gray-200 flex-1" />
                 </div>
+
+                <OptionCard
+                  emoji={<Calculator size={20} />}
+                  title="Keine Dokumente zur Hand?"
+                  subtitle="Über aktuelles Gehalt schätzen"
+                  onClick={() => setImportMethod('manual')}
+                />
               </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in">
-                <div className="mb-12 text-center">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Erwartete DRV-Rente (Netto)</p>
-                  <p className="text-6xl font-black text-indigo-400 tabular-nums">€ {livePension}</p>
+            )}
+
+            {(dropState === 'processing' || dropState === 'done') && (
+              <div className="flex-1 flex flex-col">
+                <h1 className="text-2xl font-black text-black mb-2 leading-tight">KI-Analyse läuft.</h1>
+                <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+                  {dropState === 'processing' ? 'Analysiere 3 Dokumente...' : 'Alle Dokumente erkannt!'}
+                </p>
+
+                <div className="space-y-3">
+                  {MOCK_DETECTED.map((asset, idx) => {
+                    const detected = processingStep > idx;
+                    const loading = processingStep === idx && dropState === 'processing';
+                    const typeLabel =
+                      asset.type === 'drv'     ? 'DRV Renteninformation' :
+                      asset.type === 'bAV'     ? 'Allianz bAV' :
+                                                 'Deka Riester-Rente';
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${
+                          detected ? 'bg-emerald-50 border-emerald-200' :
+                          loading  ? 'bg-[#F9FAFB] border-gray-300' :
+                                     'bg-[#F9FAFB] border-gray-200 opacity-40'
+                        }`}
+                      >
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${detected ? 'bg-emerald-100' : 'bg-[#F4F4F5]'}`}>
+                          {detected
+                            ? <CheckCircle2 size={17} className="text-emerald-600" />
+                            : loading
+                              ? <Loader2 size={17} className="text-gray-400 animate-spin" />
+                              : <FileText size={17} className="text-gray-300" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold text-black leading-tight">{typeLabel}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{asset.provider}</p>
+                        </div>
+                        {detected && (
+                          <div className="text-right animate-in fade-in duration-300 shrink-0">
+                            <p className="text-[14px] font-extrabold text-emerald-600">{asset.monthlyPayout.toLocaleString('de-DE')} €</p>
+                            <p className="text-[10px] text-emerald-400">/ Monat</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="relative w-16 h-16 mb-6">
-                  <div className="absolute inset-0 border-4 border-slate-800 border-t-indigo-500 rounded-full animate-spin" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <FileText size={20} className="text-indigo-400 animate-pulse" />
+
+                {dropState === 'done' && (
+                  <div className="mt-5 p-4 bg-[#F9FAFB] border border-gray-200 rounded-2xl animate-in fade-in duration-500">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[12px] text-gray-500 font-medium">Gesamt erkannte Rente</p>
+                      <p className="text-[18px] font-black text-black">
+                        {MOCK_DETECTED.reduce((s, a) => s + a.monthlyPayout, 0).toLocaleString('de-DE')} €/Mtl.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <p className="text-sm font-bold text-white text-center mb-1">Renteninformation_2026.pdf</p>
-                <p className="text-xs text-indigo-400 animate-pulse text-center">Extrahiere Entgeltpunkte...</p>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* STEP 3: Manual income */}
+        {/* SCHRITT 3: Manuelle Gehaltseingabe */}
         {step === 3 && importMethod === 'manual' && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Wie hoch ist dein aktuelles Netto-Einkommen?</h1>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Wir nutzen das, um deine gesetzliche Rente grob zu schätzen.</p>
+            <h1 className="text-2xl font-black text-black mb-3 leading-tight">Wie hoch ist dein aktuelles Netto-Einkommen?</h1>
+            <p className="text-sm text-gray-500 mb-3 leading-relaxed">Wir schätzen daraus deine gesetzliche Rente und berechnen dein Rentenziel.</p>
+            <div className="flex items-center gap-2 mb-8 bg-[#F9FAFB] border border-gray-200 rounded-xl px-3 py-2">
+              <TrendingUp size={14} className="text-gray-400 shrink-0" />
+              <p className="text-[11px] text-gray-500">Rentenziel wird automatisch auf <strong className="text-black">80 %</strong> deines Nettogehalts gesetzt.</p>
+            </div>
             <div className="flex-1 flex items-center justify-center">
-              <IncomeDrumPicker
-                value={parseInt(customIncomeInput) || 2500}
-                onChange={(v) => setCustomIncomeInput(String(v))}
-              />
+              <IncomeDrumPicker value={parseInt(customIncomeInput) || 2500} onChange={(v) => setCustomIncomeInput(String(v))} />
             </div>
           </div>
         )}
 
-        {/* STEP 4: Trüffelschwein */}
+        {/* SCHRITT 4: Versteckte Rentenpunkte */}
         {step === 4 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-white mb-3 leading-tight">Lass uns verstecktes Geld finden.</h1>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Hast du nach deinem 17. Lebensjahr eine Schule besucht oder studiert?</p>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <h1 className="text-2xl font-black text-black leading-tight">Lass uns verstecktes Geld finden.</h1>
+              <button
+                onClick={() => setShowBonusInfo(true)}
+                className="flex-none w-8 h-8 bg-[#F4F4F5] hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors cursor-pointer mt-0.5"
+              >
+                <HelpCircle size={16} className="text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-8 leading-relaxed">Hast du nach deinem 17. Lebensjahr eine Schule besucht oder studiert?</p>
             <div className="space-y-3">
-              <OptionCard emoji="🎓" title="Ja, habe ich" subtitle="Wir prüfen auf fehlende Rentenpunkte" selected={selectedBonusOption === 'yes'} onClick={() => setSelectedBonusOption('yes')} />
-              <OptionCard emoji="🛠️" title="Nein, direkte Ausbildung/Arbeit" selected={selectedBonusOption === 'no'} onClick={() => setSelectedBonusOption('no')} />
+              <OptionCard emoji={<GraduationCap size={20} />} title="Ja, habe ich" subtitle="Wir prüfen auf fehlende Rentenpunkte" selected={selectedBonusOption === 'yes'} onClick={() => setSelectedBonusOption('yes')} />
+              <OptionCard emoji={<Wrench size={20} />} title="Nein, direkte Ausbildung/Arbeit" selected={selectedBonusOption === 'no'} onClick={() => setSelectedBonusOption('no')} />
             </div>
           </div>
         )}
 
-        {/* STEP 5: Bonus result */}
+        {/* SCHRITT 5: Bonus-Bestätigung */}
         {step === 5 && (
           <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col flex-1 justify-center text-center">
             {foundBonus > 0 ? (
               <>
-                <div className="text-[60px] mb-2">🎉</div>
-                <h1 className="text-3xl font-black text-white mb-4">85 € Free Money gefunden!</h1>
-                <p className="text-slate-400 leading-relaxed px-4 mb-8">
-                  Schul- und Studienzeiten sind bei der DRV oft nicht erfasst. Wir generieren später automatisch das Formular (V0100) für dich, um dir dieses Geld zu sichern.
+                <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle2 size={40} className="text-emerald-600" />
+                </div>
+                <h1 className="text-3xl font-black text-black mb-4">85 € Free Money gefunden!</h1>
+                <p className="text-gray-500 leading-relaxed px-4 mb-8">
+                  Weil du nach deinem 17. Geburtstag in Ausbildung warst, steht dir mehr Geld zu. Wir sichern dir diesen Bonus und legen den fertigen Antrag später einfach in deinen Optimierungsplan.
                 </p>
               </>
             ) : (
               <>
-                <div className="text-[60px] mb-2">👍</div>
-                <h1 className="text-3xl font-black text-white mb-4">Alles erfasst!</h1>
-                <p className="text-slate-400 leading-relaxed px-4 mb-8">Dein Rentenverlauf scheint lückenlos zu sein.</p>
+                <div className="w-20 h-20 bg-[#F4F4F5] border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle2 size={40} className="text-black" />
+                </div>
+                <h1 className="text-3xl font-black text-black mb-4">Alles erfasst!</h1>
+                <p className="text-gray-500 leading-relaxed px-4 mb-8">Dein Rentenverlauf scheint lückenlos zu sein.</p>
               </>
             )}
           </div>
         )}
 
-        {/* STEP 6: bAV */}
+        {/* SCHRITT 6: Finaler Ladescreen */}
         {step === 6 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            {!isUploadingBAV ? (
-              <>
-                <h1 className="text-2xl font-black text-white mb-3 leading-tight">Deine Betriebliche Rente.</h1>
-                <p className="text-sm text-slate-400 mb-8 leading-relaxed">Hast du eine bAV über deinen Arbeitgeber (z.B. Allianz, MetallRente)?</p>
-                <button onClick={() => setFullscreenImage({ src: '/Renteninformation.webp', label: 'Standmitteilung' })} className="rounded-2xl overflow-hidden border border-slate-800 mb-5 relative w-full cursor-pointer group">
-                  <img src="/Renteninformation.webp" alt="Beispiel Renteninformation" className="w-full object-cover max-h-40 object-top" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
-                  <p className="absolute bottom-2 left-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Dieses Dokument benötigst du</p>
-                  <div className="absolute top-2 right-2 w-7 h-7 bg-slate-950/60 rounded-lg flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                    <Maximize2 size={13} className="text-white" />
-                  </div>
-                </button>
-                <div className="space-y-3">
-                  <div
-                    onClick={() => setSelectedBavOption('upload')}
-                    className={`w-full relative overflow-hidden p-5 rounded-2xl flex items-center justify-between transition-all cursor-pointer group border ${
-                      selectedBavOption === 'upload'
-                        ? 'bg-indigo-500/10 border-indigo-500'
-                        : 'bg-slate-900 border-slate-800 hover:border-indigo-500 hover:bg-slate-800/80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                        <Briefcase size={20} className="text-blue-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-[15px] text-white">Standmitteilung scannen</h3>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Automatischer bAV-Import</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} className={selectedBavOption === 'upload' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-indigo-400 transition-colors'} />
-                  </div>
-                  <OptionCard emoji="🤷" title="Ich habe keine bAV" subtitle="Oder weiß es nicht" selected={selectedBavOption === 'none'} onClick={() => setSelectedBavOption('none')} />
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in">
-                <div className="mb-12 text-center">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Gefundene bAV-Ansprüche</p>
-                  <p className="text-6xl font-black text-blue-400 tabular-nums">€ {liveBav}</p>
-                </div>
-                <div className="relative w-16 h-16 mb-6">
-                  <div className="absolute inset-0 border-4 border-slate-800 border-t-blue-500 rounded-full animate-spin" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Building size={20} className="text-blue-400 animate-pulse" />
-                  </div>
-                </div>
-                <p className="text-sm font-bold text-white text-center mb-1">Standmitteilung_Allianz.pdf</p>
-                <p className="text-xs text-blue-400 animate-pulse text-center">Lese Vertragswerte aus...</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* STEP 7: Sparrate */}
-        {step === 7 && !showCustomMonthly && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-white mb-8 leading-tight">Wie viel legst du privat jeden Monat zurück?</h1>
-            <div className="space-y-3">
-              <OptionCard emoji="💤" title="0 €" subtitle="Noch gar nichts" selected={selectedSavingsAmount === 0} onClick={() => setSelectedSavingsAmount(0)} />
-              <OptionCard emoji="🌱" title="50 €" subtitle="Der Einstieg" selected={selectedSavingsAmount === 50} onClick={() => setSelectedSavingsAmount(50)} />
-              <OptionCard emoji="⭐" title="150 €" subtitle="Der Klassiker" selected={selectedSavingsAmount === 150} onClick={() => setSelectedSavingsAmount(150)} />
-              <OptionCard emoji="🎯" title="Eigener Betrag" subtitle="Individuell festlegen" selected={selectedSavingsAmount === -1} onClick={() => { setSelectedSavingsAmount(-1); setShowCustomMonthly(true); }} />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 7: Custom monthly */}
-        {step === 7 && showCustomMonthly && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-white mb-8 leading-tight">Dein individueller monatlicher Betrag</h1>
-            <div className="flex-1 flex items-center justify-center">
-              <SavingsDrumPicker
-                value={parseInt(customMonthlyInput) || 0}
-                onChange={(v) => setCustomMonthlyInput(String(v))}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 8: AI Processing */}
-        {step === 8 && (
           <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
             <div className="relative mb-8">
-              <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="absolute inset-[-20px] bg-indigo-500/10 rounded-full animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.2s' }} />
-              <div className="relative w-24 h-24 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center shadow-2xl">
-                <Loader2 size={40} className="text-indigo-400 animate-spin" />
+              <div className="absolute inset-0 bg-black/10 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="absolute inset-[-20px] bg-black/5 rounded-full animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.2s' }} />
+              <div className="relative w-24 h-24 bg-[#F4F4F5] border border-gray-200 rounded-full flex items-center justify-center">
+                <Loader2 size={40} className="text-black animate-spin" />
               </div>
             </div>
-            <h2 className="text-lg font-bold text-white text-center h-8 transition-opacity duration-300">{loadingText}</h2>
+            <h2 className="text-lg font-bold text-black text-center h-8 transition-opacity duration-300">{loadingText}</h2>
           </div>
         )}
 
       </div>
 
-      {/* Bottom nav — always pinned to bottom of phone */}
+      {/* Bottom Navigation */}
       {navConfig && (
-        <div className="flex-none px-6 pb-8 pt-4 bg-slate-950">
+        <div className="flex-none px-6 pb-8 pt-4 bg-white">
           <BottomNav {...navConfig} />
         </div>
       )}
 
-      {/* Fullscreen image overlay */}
-      {fullscreenImage && (
-        <div className="absolute inset-0 z-50 bg-slate-950/95 flex flex-col animate-in fade-in duration-200">
-          <div className="flex items-center justify-between px-5 py-4">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{fullscreenImage.label}</p>
-            <button onClick={() => setFullscreenImage(null)} className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition-colors cursor-pointer">
-              <X size={18} className="text-white" />
-            </button>
+      {/* Bonus-Info-Modal (Bottom Sheet) */}
+      {showBonusInfo && (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowBonusInfo(false)} />
+          <div className="relative bg-white rounded-t-3xl px-6 pt-6 pb-10 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[17px] font-black text-black">Wie funktioniert das?</h3>
+              <button onClick={() => setShowBonusInfo(false)} className="w-8 h-8 bg-[#F4F4F5] hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors cursor-pointer">
+                <X size={16} className="text-black" />
+              </button>
+            </div>
+            <div className="space-y-4 text-[14px] text-gray-600 leading-relaxed">
+              <div className="bg-[#F9FAFB] border border-gray-200 rounded-2xl p-4">
+                <p className="font-bold text-black mb-1">Anrechnungszeiten bei der DRV</p>
+                <p>Die Deutsche Rentenversicherung kennt sogenannte <strong className="text-black">Anrechnungszeiten</strong> — Lebensabschnitte, die trotz fehlender Beitragszahlung auf dein Rentenkonto angerechnet werden können.</p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <GraduationCap size={18} className="text-black shrink-0 mt-0.5" />
+                  <p><strong className="text-black">Schul- & Studienzeiten ab 17</strong> — Gymnasien, Berufsschulen, Hochschulen und Universitäten können als Anrechnungszeiten eingetragen werden.</p>
+                </div>
+                <div className="flex gap-3">
+                  <CheckCircle2 size={18} className="text-black shrink-0 mt-0.5" />
+                  <p><strong className="text-black">Bis zu 8 Jahre</strong> anrechenbar — jedes Jahr zählt als ca. 0,45 Entgeltpunkte, was rund <strong className="text-black">18–22 € mehr Rente pro Monat</strong> bedeuten kann.</p>
+                </div>
+                <div className="flex gap-3">
+                  <FileText size={18} className="text-black shrink-0 mt-0.5" />
+                  <p><strong className="text-black">Formular V0100</strong> — der offizielle DRV-Antrag, den wir automatisch für dich ausfüllen und vorausfüllt zurückschicken.</p>
+                </div>
+              </div>
+              <p className="text-[12px] text-gray-400 pt-1">Quelle: Deutsche Rentenversicherung, §58 SGB VI (Anrechnungszeiten)</p>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
-            <img src={fullscreenImage.src} alt={fullscreenImage.label} className="w-full rounded-2xl object-contain" />
+        </div>
+      )}
+
+      {/* Dokument-Modal (Bottom Sheet) */}
+      {showDocModal && (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowDocModal(false)} />
+          <div className="relative bg-white rounded-t-3xl px-6 pt-6 pb-10 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[17px] font-black text-black">Unterstützte Dokumente</h3>
+              <button onClick={() => setShowDocModal(false)} className="w-8 h-8 bg-[#F4F4F5] hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors cursor-pointer">
+                <X size={16} className="text-black" />
+              </button>
+            </div>
+            <div className="space-y-6">
+              {DOC_CATEGORIES.map((cat) => {
+                const Icon = cat.label === 'Gesetzlich' ? Building2 : cat.label === 'Betrieblich' ? FileText : Shield;
+                return (
+                  <div key={cat.label}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon size={13} className="text-gray-400" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{cat.label}</p>
+                    </div>
+                    <div className="space-y-2">
+                      {cat.docs.map((doc) => (
+                        <div key={doc} className="flex items-center gap-3 py-1.5 px-3 bg-[#F9FAFB] rounded-xl">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+                          <p className="text-[13px] text-black font-medium">{doc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

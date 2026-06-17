@@ -7,18 +7,14 @@ const Slider = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
-    // HIER: Das cn() wurde durch einen normalen Template-String ersetzt
     className={`relative flex w-full touch-none select-none items-center cursor-pointer ${className || ""}`}
     {...props}
   >
-    {/* Der Hintergrund (Track) in weichem Schiefergrau */}
-    <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-slate-800">
-      {/* Die gefüllte Leiste (Range) in Indigo */}
-      <SliderPrimitive.Range className="absolute h-full bg-indigo-500" />
+    <SliderPrimitive.Track className="relative h-[3px] w-full grow overflow-hidden rounded-full bg-gray-200">
+      <SliderPrimitive.Range className="absolute h-full bg-black" />
     </SliderPrimitive.Track>
-    
-    {/* Der Anfasser (Thumb) */}
-    <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-indigo-500 bg-white ring-offset-slate-950 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:scale-110" />
+
+    <SliderPrimitive.Thumb className="block h-[18px] w-[18px] rounded-full border-2 border-black bg-white shadow-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:scale-110 active:scale-95" />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName

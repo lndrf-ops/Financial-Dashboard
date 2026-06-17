@@ -64,18 +64,18 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
+  background: #D1D5DB;
   border-radius: 10px;
   border: 2px solid var(--muted);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+  background: #9CA3AF;
 }
 
 /* Firefox */
 * {
-  scrollbar-color: var(--primary) var(--muted);
+  scrollbar-color: #D1D5DB var(--muted);
   scrollbar-width: thin;
 }
 
@@ -84,12 +84,12 @@ a:hover {
    ======================================== */
 
 ::selection {
-  background-color: rgba(59, 130, 246, 0.3);
+  background-color: rgba(0, 0, 0, 0.1);
   color: var(--foreground);
 }
 
 ::-moz-selection {
-  background-color: rgba(59, 130, 246, 0.3);
+  background-color: rgba(0, 0, 0, 0.1);
   color: var(--foreground);
 }
 
@@ -121,10 +121,3 @@ img {
   display: block;
 }
 
-/* ========================================
-   Dark Mode Adjustments
-   ======================================== */
-
-@supports (color: oklch(0 0 0)) {
-  /* CSS Color Level 4 support */
-}
