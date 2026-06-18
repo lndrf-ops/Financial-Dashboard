@@ -32,11 +32,11 @@ export function PersonalDataView({ onBack }: PersonalDataViewProps) {
           <div className="space-y-3">
             <div className="bg-[#F9FAFB] border border-gray-200 rounded-xl p-3 focus-within:border-black transition-colors">
               <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold block mb-1">Vorname</label>
-              <input type="text" defaultValue="John" className="w-full bg-transparent text-sm text-black focus:outline-none" />
+              <input type="text" defaultValue="Lena" className="w-full bg-transparent text-sm text-black focus:outline-none" />
             </div>
             <div className="bg-[#F9FAFB] border border-gray-200 rounded-xl p-3 focus-within:border-black transition-colors">
               <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold block mb-1">Nachname</label>
-              <input type="text" defaultValue="Doe" className="w-full bg-transparent text-sm text-black focus:outline-none" />
+              <input type="text" defaultValue="Müller" className="w-full bg-transparent text-sm text-black focus:outline-none" />
             </div>
             <div className="bg-[#F9FAFB] border border-gray-200 rounded-xl p-3 focus-within:border-black transition-colors">
               <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold block mb-1">Geburtsdatum</label>

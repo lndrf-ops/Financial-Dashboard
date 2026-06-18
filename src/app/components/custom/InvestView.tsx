@@ -139,7 +139,7 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
             )}
           </div>
 
-          <button className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-[15px] py-4 rounded-xl mt-4 transition-colors flex justify-center items-center gap-2 cursor-pointer">
+          <button onClick={() => window.open('https://app.traderepublic.com', '_blank')} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-[15px] py-4 rounded-xl mt-4 transition-colors flex justify-center items-center gap-2 cursor-pointer">
             In Trade Republic öffnen <ArrowRight size={18} />
           </button>
         </div>

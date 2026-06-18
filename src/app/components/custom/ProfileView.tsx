@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Shield, UploadCloud, ChevronDown, Info, Landmark, Link2, Key, Building } from "lucide-react";
+import { User, Shield, UploadCloud, ChevronDown, Info, Landmark, Link2, Key, Building, FileCheck, Send, Loader2, CheckCircle2 } from "lucide-react";
 import { ScenarioSimulator, ScenarioSimulatorProps } from "./ScenarioSimulator";
 import { DataSyncModal } from "./DataSyncModal";
 
@@ -21,10 +21,93 @@ function CollapsibleSection({ title, defaultOpen = false, children }: { title: s
 interface ProfileViewProps extends ScenarioSimulatorProps {
   onNavigateToPersonalData: () => void;
   onSyncComplete: (payout: number, accumulated: number, type: 'drv' | 'bav') => void;
+  vlActive: boolean;
+  bavNetto: number;
+}
+
+function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: number }) {
+  const [vlState, setVlState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [bavState, setBavState] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  const handleSend = (type: 'vl' | 'bav') => {
+    if (type === 'vl') { setVlState('sending'); setTimeout(() => setVlState('sent'), 1800); }
+    else { setBavState('sending'); setTimeout(() => setBavState('sent'), 1800); }
+  };
+
+  const SentCard = ({ title }: { title: string }) => (
+    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-4 animate-in zoom-in-95 duration-300">
+      <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
+        <CheckCircle2 size={18} className="text-emerald-600" />
+      </div>
+      <div>
+        <p className="font-bold text-[14px] text-emerald-700 leading-tight">Antrag gesendet!</p>
+        <p className="text-[11px] text-emerald-600 mt-0.5">{title} · hr@techstartup-berlin.de</p>
+      </div>
+    </div>
+  );
+
+  const PendingCard = ({ type, title, subtitle, bullets }: { type: 'vl' | 'bav'; title: string; subtitle: string; bullets: string[] }) => {
+    const sending = (type === 'vl' ? vlState : bavState) === 'sending';
+    return (
+      <div className="bg-[#F9FAFB] border border-gray-200 rounded-2xl p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center shrink-0">
+            <FileCheck size={18} className="text-black" />
+          </div>
+          <div>
+            <p className="font-bold text-[14px] text-black leading-tight">{title}</p>
+            <p className="text-[11px] text-gray-500 mt-0.5">{subtitle}</p>
+          </div>
+        </div>
+        <div className="space-y-1.5 mb-4">
+          {bullets.map(b => (
+            <div key={b} className="flex items-center gap-2 text-[12px] text-gray-600">
+              <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+              <span>{b}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => handleSend(type)}
+          disabled={sending}
+          className="w-full h-11 bg-black hover:bg-gray-900 disabled:opacity-50 text-white font-bold text-[13px] rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          {sending ? <><Loader2 size={14} className="animate-spin" /> Wird gesendet…</> : <><Send size={14} /> Antrag senden</>}
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3 mt-4">
+      <p className="text-[12px] text-gray-500 leading-relaxed">
+        Diese Anträge werden direkt an deine Personalabteilung gesendet — vorausgefüllt mit deinen Daten.
+      </p>
+      {vlActive && (vlState === 'sent'
+        ? <SentCard title="VL-Sparen" />
+        : <PendingCard
+            type="vl"
+            title="Antrag auf VL-Sparen"
+            subtitle="hr@techstartup-berlin.de · Kostenlos"
+            bullets={["Bis zu 40 € monatlich vom Arbeitgeber", "Fließt direkt in deinen ETF-Sparplan", "Bearbeitungszeit: 2–4 Wochen"]}
+          />
+      )}
+      {bavNetto > 0 && (bavState === 'sent'
+        ? <SentCard title="bAV Entgeltumwandlung" />
+        : <PendingCard
+            type="bav"
+            title="Antrag auf Entgeltumwandlung"
+            subtitle={`hr@techstartup-berlin.de · ${bavNetto} € netto`}
+            bullets={["Steuervorteile ab dem nächsten Gehalt", "Bruttoverzicht senkt deine Steuerlast", "Bearbeitungszeit: 2–4 Wochen"]}
+          />
+      )}
+    </div>
+  );
 }
 
 export function ProfileView(props: ProfileViewProps) {
   const [syncType, setSyncType] = useState<'drv' | 'bav' | null>(null);
+  const showAntraege = props.vlActive || props.bavNetto > 0;
 
   return (
     <div className="bg-white min-h-screen text-black w-full pb-32">
@@ -75,6 +158,12 @@ export function ProfileView(props: ProfileViewProps) {
             </div>
           </div>
         </CollapsibleSection>
+
+        {showAntraege && (
+          <CollapsibleSection title="Anträge & HR" defaultOpen={false}>
+            <AntraegSection vlActive={props.vlActive} bavNetto={props.bavNetto} />
+          </CollapsibleSection>
+        )}
 
         <CollapsibleSection title="Daten-Sync" defaultOpen={false}>
           <div className="grid grid-cols-2 gap-3 mt-4">

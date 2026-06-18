@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { usePensionMath } from "./hooks/usePensionMath";
-import { TrendingUp, Bell, LogOut, Building2, Briefcase, Home, Landmark, Bitcoin, X, CheckCircle2, ArrowRight, Users } from "lucide-react";
+import { TrendingUp, Bell, LogOut, Building2, Briefcase, Home, Landmark, Bitcoin, X, CheckCircle2, ArrowRight, Users, LayoutDashboard, Sliders, User, HelpCircle, MessageCircle } from "lucide-react";
 
 import { AssetBreakdown, Asset } from "./components/custom/AssetBreakdown";
 import { OptimizationPlan } from "./components/custom/OptimizationPlan";
@@ -10,6 +10,7 @@ import { SimulateView, LifeEvent, StressTests } from "./components/custom/Simula
 import { ProfileView } from "./components/custom/ProfileView";
 import { AIOnboarding, AIOnboardingData } from "./components/custom/AIOnboarding";
 import { PersonalDataView } from "./components/custom/PersonalDataView";
+import { GuidedSmartChat } from "./components/custom/GuidedSmartChat";
 
 // ─── Tutorial ────────────────────────────────────────────────────────────────
 
@@ -129,10 +130,129 @@ function Confetti() {
   );
 }
 
+// ─── Per-Tab Feature Tutorial ─────────────────────────────────────────────────
+
+interface FeatureStep {
+  title: string;
+  text: string;
+  zone: 'header' | 'upper' | 'middle' | 'lower' | 'bottom';
+}
+
+const FEATURE_STEPS: Record<string, FeatureStep[]> = {
+  dashboard: [
+    { title: "Dein Rentenring", text: "Der Ring zeigt deinen Rentendeckungsgrad auf einen Blick. Jedes Segment steht für eine Rentenquelle — tippe drauf um Details zu sehen.", zone: 'upper' },
+    { title: "Deine 3 größten Hebel", text: "FutureMe berechnet automatisch die 3 effektivsten Maßnahmen zur Schließung deiner Lücke — sortiert nach Wirkung.", zone: 'middle' },
+    { title: "Deine Rentenbausteine", text: "Tippe auf einen Baustein um Werte direkt anzupassen — z.B. deine gesetzliche Rente oder den ETF-Depotwert.", zone: 'lower' },
+  ],
+  invest: [
+    { title: "Dein monatlicher Sparplan", text: "Der Betrag, der jeden Monat automatisch über dein Trade Republic Depot investiert wird — direkt aus dem Onboarding übernommen.", zone: 'upper' },
+    { title: "10-Jahres-Vorschau", text: "Der Chart zeigt die Vermögensentwicklung der nächsten 10 Jahre bei gleichbleibender Sparrate und 7% Rendite p.a.", zone: 'middle' },
+    { title: "Deine Ausführung", text: "Dein Kapital wird auf MSCI World ETF und optional Bitcoin aufgeteilt — mit einem Klick direkt in deinem TR-Depot ausführbar.", zone: 'lower' },
+  ],
+  simulate: [
+    { title: "Lebensereignisse", text: "Simuliere echte Momente: Elternzeit, Hauskauf, Jobwechsel oder Gehaltssprünge. Sieh sofort die Auswirkung auf dein Rentenkonto.", zone: 'upper' },
+    { title: "Stresstests", text: "Teste dein Portfolio gegen reale Extremszenarien: Börsencrash, hohe Inflation oder überdurchschnittliche Lebenserwartung.", zone: 'middle' },
+    { title: "Live-Auswirkung", text: "Alle Szenarien werden sofort auf deinen Rentenring angerechnet — wechsel zur Übersicht um das Ergebnis zu sehen.", zone: 'lower' },
+  ],
+  profile: [
+    { title: "Deine Kernannahmen", text: "Passe Renteneintrittsalter, monatliche Sparrate und Renditeerwartung an. Alle Berechnungen aktualisieren sich in Echtzeit.", zone: 'upper' },
+    { title: "Rentenziel & Lebenserwartung", text: "Lege dein Wunscheinkommen im Alter fest und wie lange das Kapital reichen soll. FutureMe rechnet Inflation bereits ein.", zone: 'middle' },
+    { title: "DRV-Sync & Steuern", text: "Lade deinen Rentenbescheid hoch oder gleiche Werte mit der DRV ab. Hinterlege Steuerklasse für eine präzise Netto-Berechnung.", zone: 'lower' },
+  ],
+  chat: [
+    { title: "Finn – dein KI-Assistent", text: "Finn kennt all deine Rentendaten und kann Szenarien direkt für dich aktivieren. Kein Menü, kein Suchen — einfach fragen.", zone: 'header' },
+    { title: "Smarte Vorschläge", text: "Finn schlägt dir die wirkungsvollsten Aktionen vor. Tipp auf einen Chip und er antwortet sofort — und passt deine Simulation live an.", zone: 'lower' },
+    { title: "Eigene Fragen stellen", text: "Schreib Finn direkt: z.B. 'Was passiert bei Inflation?' oder 'Erhöhe meine Sparrate'. Er versteht natürliche Sprache.", zone: 'bottom' },
+  ],
+};
+
+const ZONE_RECTS: Record<string, { top: number; height: number }> = {
+  header: { top: 56,  height: 64  },
+  upper:  { top: 130, height: 255 },
+  middle: { top: 405, height: 135 },
+  lower:  { top: 555, height: 155 },
+  bottom: { top: 725, height: 64  },
+};
+
+function FeatureTutorial({ tab, step, total, onNext, onComplete }: {
+  tab: string; step: number; total: number; onNext: () => void; onComplete: () => void;
+}) {
+  const feature = FEATURE_STEPS[tab]?.[step];
+  if (!feature) { onComplete(); return null; }
+  const rect = ZONE_RECTS[feature.zone];
+  const isLast = step === total - 1;
+  const calloutAtTop = feature.zone === 'lower' || feature.zone === 'bottom';
+
+  // Spotlight geometry
+  const pad = 10;
+  const sx = pad;
+  const sy = rect.top - pad;
+  const sw = 430 - pad * 2;
+  const sh = rect.height + pad * 2;
+  const rx = 20;
+
+  // Rounded-rect SVG path helper
+  const rrPath = (x: number, y: number, w: number, h: number, r: number) =>
+    `M ${x+r} ${y} H ${x+w-r} A ${r} ${r} 0 0 1 ${x+w} ${y+r} V ${y+h-r} A ${r} ${r} 0 0 1 ${x+w-r} ${y+h} H ${x+r} A ${r} ${r} 0 0 1 ${x} ${y+h-r} V ${y+r} A ${r} ${r} 0 0 1 ${x+r} ${y} Z`;
+
+  // Outer rect + spotlight hole → evenodd makes hole transparent
+  const overlayPath = `M 0 0 H 430 V 900 H 0 Z ${rrPath(sx, sy, sw, sh, rx)}`;
+
+  return (
+    <div className="fixed inset-0 z-[90] pointer-events-none" style={{ maxWidth: 430, margin: '0 auto', left: 0, right: 0 }}>
+      {/* Gray overlay with spotlight cutout */}
+      <svg
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+        viewBox="0 0 430 900"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        {/* Semi-transparent gray overlay — evenodd creates hole where spotlight is */}
+        <path
+          fillRule="evenodd"
+          d={overlayPath}
+          fill="rgba(210,210,215,0.84)"
+        />
+        {/* Subtle white border ring around the spotlight */}
+        <rect
+          x={sx} y={sy} width={sw} height={sh} rx={rx} ry={rx}
+          fill="none"
+          stroke="rgba(255,255,255,0.7)"
+          strokeWidth="1.5"
+        />
+      </svg>
+
+      {/* Callout card */}
+      <div
+        className="pointer-events-auto absolute left-4 right-4 bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+        style={{ zIndex: 92, ...(calloutAtTop ? { top: 80 } : { bottom: 96 }) }}
+      >
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h3 className="text-[16px] font-black text-black leading-tight">{feature.title}</h3>
+          <button onClick={onComplete} className="text-gray-300 hover:text-black cursor-pointer shrink-0 mt-0.5"><X size={15} /></button>
+        </div>
+        <p className="text-[13px] text-gray-500 leading-relaxed mb-5">{feature.text}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 flex-1">
+            {Array.from({ length: total }).map((_, i) => (
+              <div key={i} className={`h-1 rounded-full flex-1 transition-all duration-300 ${i === step ? 'bg-black' : i < step ? 'bg-gray-400' : 'bg-gray-100'}`} />
+            ))}
+          </div>
+          <button
+            onClick={isLast ? onComplete : onNext}
+            className="bg-black text-white text-[13px] font-extrabold px-5 py-2.5 rounded-xl cursor-pointer"
+          >
+            {isLast ? 'Fertig' : 'Weiter →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'welcome' | 'aionboarding' | 'onboarding' | 'dashboard' | 'optimize' | 'invest' | 'simulate' | 'profile' | 'personalData'>('welcome');
+  const [activeView, setActiveView] = useState<'welcome' | 'aionboarding' | 'onboarding' | 'dashboard' | 'optimize' | 'invest' | 'simulate' | 'profile' | 'personalData' | 'chat'>('welcome');
   const [notification, setNotification] = useState<string | null>(null);
   const [hasShownSuccessToast, setHasShownSuccessToast] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -141,6 +261,40 @@ export default function App() {
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Nav dock hover
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
+
+  // Chat persistence
+  const [chatResetKey, setChatResetKey] = useState(0);
+
+  // Per-tab feature tutorial
+  const [featureTutorialTab, setFeatureTutorialTab] = useState<string | null>(null);
+  const [featureTutorialStep, setFeatureTutorialStep] = useState(0);
+  const [seenTabTutorials, setSeenTabTutorials] = useState<Set<string>>(new Set());
+
+  const handleTabNav = (id: string) => {
+    setActiveView(id as any);
+    if (!seenTabTutorials.has(id) && FEATURE_STEPS[id]) {
+      setTimeout(() => {
+        setFeatureTutorialTab(id);
+        setFeatureTutorialStep(0);
+        setSeenTabTutorials(prev => new Set([...prev, id]));
+      }, 350);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'dashboard' && !seenTabTutorials.has('dashboard') && FEATURE_STEPS['dashboard']) {
+      const timer = setTimeout(() => {
+        setFeatureTutorialTab('dashboard');
+        setFeatureTutorialStep(0);
+        setSeenTabTutorials(prev => new Set([...prev, 'dashboard']));
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [activeView]);
 
   const [userName, setUserName] = useState("Lena");
   const [currentAge, setCurrentAge] = useState(30);
@@ -201,16 +355,58 @@ export default function App() {
       .filter(a => a.type !== 'drv')
       .reduce((s, a) => s + a.monthlyPayout, 0);
 
+    let companyAsset: Asset;
+    let toastMsg: string;
+
+    if (data.employmentType === 'public') {
+      const vblPayout = otherPayout > 0 ? otherPayout : Math.round(drvPayout * 0.12);
+      companyAsset = {
+        id: "company",
+        name: "VBL-Versicherung",
+        subtitle: "Pflichtversicherung öffentl. Dienst",
+        icon: Briefcase,
+        payout: vblPayout,
+        accumulatedLabel: "Angespartes Kapital",
+        accumulatedValue: vblPayout > 0 ? vblPayout * 120 : 8000,
+      };
+      toastMsg = "VBL-Pflichtversicherung erkannt & aktiviert";
+      setVlActive(false);
+    } else if (data.employmentType === 'selfEmployed') {
+      companyAsset = {
+        id: "company",
+        name: "Rürup-Rente",
+        subtitle: "Steuerlich gefördert (§ 10 EStG)",
+        icon: Briefcase,
+        payout: otherPayout,
+        accumulatedLabel: "Angespartes Kapital",
+        accumulatedValue: otherPayout > 0 ? otherPayout * 120 : 0,
+      };
+      toastMsg = "Rürup-Rente als Vorsorgeweg eingetragen";
+      setVlActive(false);
+    } else {
+      companyAsset = {
+        id: "company",
+        name: "Betriebliche Rente",
+        subtitle: "bAV & VL verfügbar",
+        icon: Briefcase,
+        payout: otherPayout,
+        accumulatedLabel: "Kapital",
+        accumulatedValue: otherPayout > 0 ? 15000 : 0,
+      };
+      toastMsg = "bAV & VL für dich freigeschaltet";
+      setVlActive(true);
+    }
+
     setDynamicAssets([
       { id: "statutory", name: "Gesetzliche Rente", subtitle: "Via KI-Scan (Netto)", icon: Building2, payout: drvPayout, accumulatedLabel: "Beiträge", accumulatedValue: drvPayout * 40 },
       { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: etfStart },
-      { id: "company", name: "Betriebliche Rente", subtitle: "bAV & Private Vorsorge", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Kapital", accumulatedValue: otherPayout > 0 ? 15000 : 0 },
+      companyAsset,
       { id: "realestate", name: "Immobilie", subtitle: "Eigenheim / Vermietung", icon: Home, payout: 0, accumulatedLabel: "Verkehrswert", accumulatedValue: 0 },
       { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: cashStart },
       { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Wallet", accumulatedValue: 0 }
     ]);
+    triggerNotification(toastMsg);
     setTutorialStep(0);
-    setShowTutorial(true);
     setActiveView('dashboard');
   };
 
@@ -231,7 +427,6 @@ export default function App() {
       { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Wallet", accumulatedValue: p.assets.cryptoAcc }
     ]);
     setTutorialStep(0);
-    setShowTutorial(true);
     setActiveView('dashboard');
   };
 
@@ -355,23 +550,49 @@ export default function App() {
 
   if (activeView === 'welcome') {
     return (
-      <div className="min-h-screen flex flex-col text-white max-w-[430px] mx-auto font-sans relative px-6 py-12 justify-center items-center text-center animate-in fade-in duration-500 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center grayscale" style={{ backgroundImage: "url('/Senior-woman-standing-on-surfboard.jpg')" }} />
+      <div className="min-h-screen flex flex-col text-white max-w-[430px] mx-auto font-sans relative animate-in fade-in duration-500 overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center grayscale" style={{ backgroundImage: "url('/brad_pit_trade_repbulicctrade_republic.jpg')" }} />
         <div className="absolute inset-0 bg-black/65" />
-        <div className="relative z-10 w-full">
-          <div className="w-24 h-24 mx-auto rounded-3xl overflow-hidden mb-8 shadow-2xl border border-white/20">
-            <img src="/traderepublic_logo.jpg" alt="Trade Republic" className="w-full h-full object-cover" />
-          </div>
-          <h1 className="text-4xl font-black text-white mb-4 tracking-tight">FutureMe</h1>
-          <p className="text-[15px] text-white/70 leading-relaxed mb-12 px-4">
-            Deine Altersvorsorge. Endlich verständlich, komplett digital und gebündelt in einer App.
+
+        {/* TR Unterapp breadcrumb */}
+        <div className="relative z-10 flex items-center gap-2 px-6 pt-14 pb-0">
+          <img src="/traderepublic_logo.jpg" alt="" className="w-4 h-4 rounded-[3px] object-cover opacity-60" />
+          <span className="text-white/45 text-[12px] font-semibold tracking-wide">Trade Republic</span>
+          <span className="text-white/25 text-[12px] mx-0.5">·</span>
+          <span className="text-white/35 text-[12px]">Altersvorsorge</span>
+        </div>
+
+        {/* Main content */}
+        <div className="relative z-10 flex flex-col flex-1 px-6 pt-10 pb-12 justify-center items-center text-center">
+          <h1 className="text-4xl font-black text-white mb-1 tracking-tight">FutureMe</h1>
+          <p className="text-white/35 text-[12px] font-semibold tracking-widest uppercase mb-7">by Trade Republic</p>
+
+          <p className="text-[15px] text-white/70 leading-relaxed mb-8 px-2">
+            Deine Rentenlücke verstehen und schließen — so einfach wie eine Überweisung.
           </p>
-          <div className="w-full space-y-4 mt-8">
+
+          {/* USPs */}
+          <div className="w-full space-y-3 mb-10 text-left">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={15} className="text-emerald-400 mt-[1px] shrink-0" />
+              <span className="text-white text-[13px] leading-snug font-medium">KI analysiert deinen Rentenbescheid in Sekunden</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={15} className="text-emerald-400 mt-[1px] shrink-0" />
+              <span className="text-white/80 text-[13px] leading-snug">Klare Empfehlungen — ohne Fachchinesisch</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={15} className="text-emerald-400 mt-[1px] shrink-0" />
+              <span className="text-white/80 text-[13px] leading-snug">Direkt investieren über dein Trade Republic Depot</span>
+            </div>
+          </div>
+
+          <div className="w-full space-y-4">
             <button onClick={() => setActiveView('aionboarding')} className="w-full flex justify-center items-center gap-2 bg-white hover:bg-gray-100 text-black font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer">
               <ArrowRight size={18} /> Jetzt starten
             </button>
             <button onClick={() => setActiveView('onboarding')} className="w-full flex justify-center items-center gap-2 bg-transparent border border-white/20 hover:bg-white/10 text-white/70 hover:text-white font-bold text-[13px] py-4 rounded-xl transition-colors cursor-pointer">
-              <Users size={18} /> Demo-Profile (Personas)
+              <Users size={18} /> Beispielprofile ansehen
             </button>
           </div>
         </div>
@@ -380,7 +601,7 @@ export default function App() {
   }
 
   if (activeView === 'aionboarding') return <AIOnboarding onComplete={handleAIOnboardingComplete} onSwitchToPersonas={() => setActiveView('welcome')} />;
-  if (activeView === 'onboarding') return <Onboarding onSelectPersona={handleLoadPersona} onSwitchToAI={() => setActiveView('aionboarding')} />;
+  if (activeView === 'onboarding') return <Onboarding onSelectPersona={handleLoadPersona} onSwitchToAI={() => setActiveView('welcome')} />;
   if (activeView === 'personalData') return <PersonalDataView onBack={() => setActiveView('profile')} />;
   if (activeView === 'optimize') {
     return (
@@ -422,6 +643,26 @@ export default function App() {
         />
       )}
 
+      {featureTutorialTab && (
+        <FeatureTutorial
+          tab={featureTutorialTab}
+          step={featureTutorialStep}
+          total={FEATURE_STEPS[featureTutorialTab]?.length ?? 0}
+          onNext={() => setFeatureTutorialStep(prev => prev + 1)}
+          onComplete={() => { setFeatureTutorialTab(null); setFeatureTutorialStep(0); }}
+        />
+      )}
+
+      {/* "?" in header for invest / simulate / profile / chat tabs */}
+      {(['invest', 'simulate', 'profile', 'chat'] as const).includes(activeView as any) && !featureTutorialTab && !showTutorial && (
+        <button
+          onClick={() => { setFeatureTutorialTab(activeView); setFeatureTutorialStep(0); }}
+          className="fixed top-[18px] right-5 z-[60] text-gray-400 hover:text-black transition-colors cursor-pointer"
+        >
+          <HelpCircle size={20} strokeWidth={1.75} />
+        </button>
+      )}
+
       {notification && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[380px] z-[100] bg-white border border-gray-200 backdrop-blur-xl rounded-2xl p-4 flex items-start gap-3 shadow-xl transition-all animate-in fade-in slide-in-from-top-4">
           <div className="w-8 h-8 rounded-full bg-[#F4F4F5] flex items-center justify-center shrink-0 mt-0.5">
@@ -446,7 +687,8 @@ export default function App() {
             </div>
             <div className="flex gap-4 text-gray-400">
               <Bell onClick={() => triggerNotification(`Dein Sparplan über ${monthlyContribution[0]} € wurde erfolgreich ausgeführt.`)} size={20} className="cursor-pointer hover:text-black transition-colors" strokeWidth={1.75} />
-              <LogOut onClick={() => setActiveView('welcome')} size={20} className="cursor-pointer hover:text-red-500 transition-colors" strokeWidth={1.75} />
+              <HelpCircle onClick={() => { setFeatureTutorialTab('dashboard'); setFeatureTutorialStep(0); }} size={20} className="cursor-pointer hover:text-black transition-colors" strokeWidth={1.75} />
+              <LogOut onClick={() => setShowLogoutConfirm(true)} size={20} className="cursor-pointer hover:text-red-500 transition-colors" strokeWidth={1.75} />
             </div>
           </div>
 
@@ -461,66 +703,106 @@ export default function App() {
           <div className="flex items-center justify-center gap-2 py-2 px-4">
             {/* Left labels */}
             <div className="flex flex-col gap-4 w-[86px]">
-              {segmentData.filter(s => s.side === 'left').map(s => (
-                <div key={s.label}
-                  className="text-right cursor-default transition-opacity duration-200"
-                  style={{ opacity: hoveredSegment === s.i ? 1 : 0 }}
-                  onMouseEnter={() => setHoveredSegment(s.i)}
-                  onMouseLeave={() => setHoveredSegment(null)}
-                >
-                  <p className="text-[11px] font-bold text-black leading-tight">{s.label}</p>
-                  <p className="text-[12px] font-extrabold leading-tight" style={{ color: s.color }}>€ {s.value.toLocaleString('de-DE')}</p>
-                  <p className="text-[10px] font-semibold leading-tight mt-0.5" style={{ color: s.color }}>{Math.round((s.value / targetPensionReal[0]) * 100)}% vom Ziel</p>
-                  <div className="flex justify-end mt-1">
-                    <div className="h-[2px] w-7 rounded-full" style={{ backgroundColor: s.color }} />
+              {segmentData.filter(s => s.side === 'left').map(s => {
+                const isHovered = hoveredSegment === s.i;
+                const anyHovered = hoveredSegment !== null;
+                return (
+                  <div key={s.label}
+                    className="text-right cursor-pointer"
+                    style={{
+                      opacity: anyHovered && !isHovered ? 0.35 : 1,
+                      transform: isHovered ? 'scale(1.1)' : anyHovered ? 'scale(0.9)' : 'scale(1)',
+                      transformOrigin: 'right center',
+                      transition: 'opacity 200ms ease, transform 220ms cubic-bezier(0.34,1.56,0.64,1)',
+                    }}
+                    onMouseEnter={() => setHoveredSegment(s.i)}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                    onClick={() => setHoveredSegment(prev => prev === s.i ? null : s.i)}
+                  >
+                    <p className="text-[11px] font-bold text-black leading-tight">{s.label}</p>
+                    <p className="text-[12px] font-extrabold leading-tight" style={{ color: s.color }}>€ {s.value.toLocaleString('de-DE')}</p>
+                    <p className="text-[10px] font-semibold leading-tight mt-0.5" style={{ color: s.color }}>{Math.round((s.value / targetPensionReal[0]) * 100)}% vom Ziel</p>
+                    <div className="flex justify-end mt-1">
+                      <div className="h-[2px] rounded-full transition-all duration-200" style={{ backgroundColor: s.color, width: isHovered ? '36px' : '28px' }} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Ring */}
             <div className="relative w-52 h-52 shrink-0 flex items-center justify-center">
               <svg viewBox="0 0 224 224" className="w-full h-full transform -rotate-90 absolute inset-0">
                 <circle cx="112" cy="112" r={ringRadius} stroke="currentColor" strokeWidth="14" fill="transparent" className="text-gray-100" />
-                {segmentData.map(s => (
-                  <circle
-                    key={s.label}
-                    cx="112" cy="112" r={ringRadius}
-                    stroke={s.color}
-                    strokeWidth="14"
-                    fill="transparent"
-                    strokeDasharray={`${s.segArc} ${ringCircumference - s.segArc}`}
-                    strokeDashoffset={ringCircumference - s.startArc}
-                    strokeLinecap="butt"
-                    style={{ opacity: hoveredSegment !== null && hoveredSegment !== s.i ? 0.2 : 1, transition: 'opacity 0.2s ease' }}
-                    onMouseEnter={() => setHoveredSegment(s.i)}
-                    onMouseLeave={() => setHoveredSegment(null)}
-                    className="cursor-pointer"
-                  />
-                ))}
+                {segmentData.map(s => {
+                  const isHovered = hoveredSegment === s.i;
+                  const anyHovered = hoveredSegment !== null;
+                  return (
+                    <circle
+                      key={s.label}
+                      cx="112" cy="112" r={ringRadius}
+                      stroke={s.color}
+                      fill="transparent"
+                      strokeDasharray={`${s.segArc} ${ringCircumference - s.segArc}`}
+                      strokeDashoffset={ringCircumference - s.startArc}
+                      strokeLinecap="butt"
+                      style={{
+                        strokeWidth: isHovered ? 20 : anyHovered ? 11 : 14,
+                        opacity: anyHovered && !isHovered ? 0.25 : 1,
+                        transition: 'stroke-width 200ms ease, opacity 200ms ease',
+                      }}
+                      onMouseEnter={() => setHoveredSegment(s.i)}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                      onClick={() => setHoveredSegment(prev => prev === s.i ? null : s.i)}
+                      className="cursor-pointer"
+                    />
+                  );
+                })}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none text-center px-3">
-                <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Mtl. Auszahlung</span>
-                <span className="text-[22px] font-black text-black leading-tight mt-0.5">€ {realPurchasingPowerMonthly.toLocaleString('de-DE')}</span>
-                <span className="text-[10px] text-gray-400 mt-0.5">Ziel: € {targetPensionReal[0].toLocaleString('de-DE')}</span>
+                {hoveredSegment !== null && segmentData[hoveredSegment] ? (
+                  <>
+                    <span className="text-[9px] font-bold uppercase tracking-widest leading-tight transition-all duration-200" style={{ color: segmentData[hoveredSegment].color }}>{segmentData[hoveredSegment].label}</span>
+                    <span className="text-[22px] font-black text-black leading-tight mt-0.5">€ {segmentData[hoveredSegment].value.toLocaleString('de-DE')}</span>
+                    <span className="text-[10px] mt-0.5 font-semibold" style={{ color: segmentData[hoveredSegment].color }}>{Math.round((segmentData[hoveredSegment].value / targetPensionReal[0]) * 100)}% vom Ziel</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Mtl. Auszahlung</span>
+                    <span className="text-[22px] font-black text-black leading-tight mt-0.5">€ {realPurchasingPowerMonthly.toLocaleString('de-DE')}</span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">Ziel: € {targetPensionReal[0].toLocaleString('de-DE')}</span>
+                  </>
+                )}
               </div>
             </div>
 
             {/* Right labels */}
             <div className="flex flex-col gap-4 w-[86px]">
-              {segmentData.filter(s => s.side === 'right').map(s => (
-                <div key={s.label}
-                  className="text-left cursor-default transition-opacity duration-200"
-                  style={{ opacity: hoveredSegment === s.i ? 1 : 0 }}
-                  onMouseEnter={() => setHoveredSegment(s.i)}
-                  onMouseLeave={() => setHoveredSegment(null)}
-                >
-                  <div className="mb-1"><div className="h-[2px] w-7 rounded-full" style={{ backgroundColor: s.color }} /></div>
-                  <p className="text-[11px] font-bold text-black leading-tight">{s.label}</p>
-                  <p className="text-[12px] font-extrabold leading-tight" style={{ color: s.color }}>€ {s.value.toLocaleString('de-DE')}</p>
-                  <p className="text-[10px] font-semibold leading-tight mt-0.5" style={{ color: s.color }}>{Math.round((s.value / targetPensionReal[0]) * 100)}% vom Ziel</p>
-                </div>
-              ))}
+              {segmentData.filter(s => s.side === 'right').map(s => {
+                const isHovered = hoveredSegment === s.i;
+                const anyHovered = hoveredSegment !== null;
+                return (
+                  <div key={s.label}
+                    className="text-left cursor-pointer"
+                    style={{
+                      opacity: anyHovered && !isHovered ? 0.35 : 1,
+                      transform: isHovered ? 'scale(1.1)' : anyHovered ? 'scale(0.9)' : 'scale(1)',
+                      transformOrigin: 'left center',
+                      transition: 'opacity 200ms ease, transform 220ms cubic-bezier(0.34,1.56,0.64,1)',
+                    }}
+                    onMouseEnter={() => setHoveredSegment(s.i)}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                    onClick={() => setHoveredSegment(prev => prev === s.i ? null : s.i)}
+                  >
+                    <div className="mb-1">
+                      <div className="h-[2px] rounded-full transition-all duration-200" style={{ backgroundColor: s.color, width: isHovered ? '36px' : '28px' }} />
+                    </div>
+                    <p className="text-[11px] font-bold text-black leading-tight">{s.label}</p>
+                    <p className="text-[12px] font-extrabold leading-tight" style={{ color: s.color }}>€ {s.value.toLocaleString('de-DE')}</p>
+                    <p className="text-[10px] font-semibold leading-tight mt-0.5" style={{ color: s.color }}>{Math.round((s.value / targetPensionReal[0]) * 100)}% vom Ziel</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -576,8 +858,9 @@ export default function App() {
                 Lücke geschlossen!
               </button>
             ) : (
-              <button onClick={() => setActiveView('optimize')} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer">
-                Lücke jetzt schließen
+              <button onClick={() => setActiveView('optimize')} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-[15px] py-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2">
+                <img src="/traderepublic_logo.jpg" alt="" className="w-4 h-4 rounded-[3px] object-cover invert" />
+                Mit Trade Republic schließen
               </button>
             )}
           </div>
@@ -600,17 +883,89 @@ export default function App() {
             projectedMonthly={realPurchasingPowerMonthly} diff={diff} isPositive={isPositive} yearsLeft={retirementAge[0] - currentAge}
             onNavigateToPersonalData={() => setActiveView('personalData')}
             onSyncComplete={handleDataSync}
+            vlActive={vlActive}
+            bavNetto={bavNettoVerzicht[0]}
           />
         </div>
       )}
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-white/90 backdrop-blur-xl border-t border-gray-100 pt-3 pb-5 flex justify-around">
-        {[{ id: "dashboard", label: "Übersicht" }, { id: "invest", label: "Investieren" }, { id: "simulate", label: "Simulation" }, { id: "profile", label: "Profil" }].map((tab) => (
-          <button key={tab.id} onClick={() => setActiveView(tab.id as any)} className={`flex flex-col items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer ${activeView === tab.id ? "text-black" : "text-gray-400 hover:text-gray-600 transition-colors"}`}>
-            {activeView === tab.id && <span className="w-1 h-1 rounded-full bg-black block absolute -top-2" />}
-            <span className="relative">{tab.label}</span>
-          </button>
-        ))}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[110] flex flex-col justify-end animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowLogoutConfirm(false)} />
+          <div className="relative bg-white rounded-t-3xl px-6 pt-7 pb-10 animate-in slide-in-from-bottom-4 duration-300 max-w-[430px] mx-auto w-full">
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-6" />
+            <h3 className="text-[20px] font-black text-black mb-2">Fortschritt geht verloren.</h3>
+            <p className="text-[14px] text-gray-500 leading-relaxed mb-8">
+              Du hast noch keinen Account — wenn du jetzt zurückgehst, sind alle eingegebenen Daten weg.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="w-full bg-black text-white font-extrabold text-[15px] py-4 rounded-xl cursor-pointer"
+              >
+                Weitermachen
+              </button>
+              <button
+                onClick={() => { setShowLogoutConfirm(false); setActiveView('welcome'); }}
+                className="w-full bg-[#F4F4F5] text-gray-500 font-bold text-[15px] py-4 rounded-xl cursor-pointer"
+              >
+                Trotzdem abmelden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className="fixed inset-0 z-40 max-w-[430px] mx-auto flex flex-col bg-white"
+        style={{ display: activeView === 'chat' ? 'flex' : 'none' }}
+      >
+        <GuidedSmartChat
+          key={chatResetKey}
+          monthlyContribution={monthlyContribution[0]}
+          setMonthlyContribution={(val) => setMonthlyContribution([val])}
+          retirementAge={retirementAge[0]}
+          setRetirementAge={(val) => setRetirementAge([val])}
+          lifeEvents={lifeEvents}
+          setLifeEvents={setLifeEvents}
+          stressTests={stressTests}
+          setStressTests={setStressTests}
+          onReset={() => setChatResetKey(k => k + 1)}
+        />
+      </div>
+
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-white/90 backdrop-blur-xl border-t border-gray-100 pt-2.5 pb-5 flex justify-around items-center">
+        {([
+          { id: "dashboard", label: "Übersicht", icon: LayoutDashboard, finn: false },
+          { id: "invest",    label: "Invest",     icon: TrendingUp,      finn: false },
+          { id: "chat",      label: "Finn",       icon: MessageCircle,   finn: true  },
+          { id: "simulate",  label: "Simulation", icon: Sliders,         finn: false },
+          { id: "profile",   label: "Profil",     icon: User,            finn: false },
+        ] as { id: string; label: string; icon: React.ElementType; finn: boolean }[]).map(({ id, label, icon: Icon, finn }, idx, arr) => {
+          const hovIdx = arr.findIndex(t => t.id === hoveredTab);
+          const dist = hovIdx === -1 ? 99 : Math.abs(idx - hovIdx);
+          const scale = dist === 0 ? 1.22 : 1;
+          const isActive = activeView === id;
+          return (
+            <button
+              key={id}
+              onClick={() => handleTabNav(id)}
+              onMouseEnter={() => setHoveredTab(id)}
+              onMouseLeave={() => setHoveredTab(null)}
+              style={{ transform: `scale(${scale})`, transition: 'transform 180ms cubic-bezier(0.34,1.56,0.64,1)' }}
+              className="relative flex flex-col items-center gap-1 min-w-[48px] py-1 cursor-pointer origin-bottom"
+            >
+              {finn ? (
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${isActive ? 'bg-black' : 'bg-black/80'}`}>
+                  <Icon size={17} className="text-white" strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+              ) : (
+                <Icon size={17} strokeWidth={isActive ? 2.5 : 1.75} className={isActive ? 'text-black' : 'text-gray-400'} />
+              )}
+              <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors ${isActive ? 'text-black' : 'text-gray-400'}`}>{label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

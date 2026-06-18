@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import {
   Loader2, ArrowLeft, ChevronRight, FileText, X, EyeOff, AlertTriangle,
   CheckCircle2, GraduationCap, Wrench, HelpCircle, Calculator,
-  TrendingUp, UploadCloud, Building2, Shield, Briefcase,
+  TrendingUp, Building2, Shield, Briefcase,
 } from "lucide-react";
 
 export interface PensionAsset {
@@ -20,6 +20,7 @@ export interface AIOnboardingData {
   income: number;
   pensionAssets: PensionAsset[];
   drvBonus: number;
+  employmentType: 'employed' | 'public' | 'selfEmployed';
 }
 
 interface AIOnboardingProps {
@@ -124,13 +125,16 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
   const [showDocModal, setShowDocModal] = useState(false);
 
   const [customIncomeInput, setCustomIncomeInput] = useState("3000");
+  const [showIncomePicker, setShowIncomePicker] = useState(false);
+  const [docSelected, setDocSelected] = useState(false);
   const [loadingText, setLoadingText] = useState("Analysiere Daten...");
   const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null);
+  const [selectedEmployment, setSelectedEmployment] = useState<'employed' | 'public' | 'selfEmployed' | null>(null);
   const [selectedBonusOption, setSelectedBonusOption] = useState<'yes' | 'no' | null>(null);
   const [foundBonus, setFoundBonus] = useState(0);
   const [showBonusInfo, setShowBonusInfo] = useState(false);
 
-  const totalSteps = 6;
+  const totalSteps = 7;
   const progress = (step / totalSteps) * 100;
 
   // Schritt 1: TR-Profil Sync — animiert, dann automatisch weiter
@@ -155,9 +159,9 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [step, dropState]);
 
-  // Schritt 6: Finaler Ladescreen → Dashboard öffnen
+  // Schritt 7: Finaler Ladescreen → Dashboard öffnen
   useEffect(() => {
-    if (step !== 6) return;
+    if (step !== 7) return;
     const t1 = setTimeout(() => setLoadingText("Berechne Steuern & Inflation..."), 800);
     const t2 = setTimeout(() => setLoadingText("Konsolidiere alle Rentenquellen..."), 1600);
     const t3 = setTimeout(() => setLoadingText("Dein Dashboard ist bereit!"), 2400);
@@ -165,20 +169,25 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
       const finalAssets = pensionAssets.map(a =>
         a.type === 'drv' ? { ...a, monthlyPayout: a.monthlyPayout + foundBonus } : a
       );
-      onComplete({ age, monthlySavings, targetPension, initialCapital, income, pensionAssets: finalAssets, drvBonus: foundBonus });
+      onComplete({ age, monthlySavings, targetPension, initialCapital, income, pensionAssets: finalAssets, drvBonus: foundBonus, employmentType: selectedEmployment ?? 'employed' });
     }, 2500);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
-  }, [step, age, monthlySavings, targetPension, initialCapital, income, pensionAssets, foundBonus, onComplete]);
+  }, [step, age, monthlySavings, targetPension, initialCapital, income, pensionAssets, foundBonus, selectedEmployment, onComplete]);
 
   const handleNext = () => setStep(prev => prev + 1);
 
   const handleBack = () => {
-    if (importMethod === 'manual') {
+    if (showIncomePicker) {
+      setShowIncomePicker(false);
+    } else if (docSelected && dropState === 'idle') {
+      setDocSelected(false);
+    } else if (importMethod === 'manual') {
       setImportMethod(null);
     } else if (dropState !== 'idle') {
       setDropState('idle');
       setProcessingStep(0);
       setPensionAssets([]);
+      setDocSelected(false);
     } else if (step > 2) {
       setStep(prev => prev - 1);
     }
@@ -228,24 +237,29 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
   );
 
   const navConfig = (() => {
-    if (step === 1 || step === 6) return null;
+    if (step === 1 || step === 7) return null;
     if (step === 2) return {
       onNext: handleNext,
       nextDisabled: !selectedFeeling,
       nextLabel: "Weiter",
       onBack: onSwitchToPersonas,
     };
-    if (step === 3 && importMethod === 'manual') return {
+    if (step === 3 && importMethod === 'manual' && showIncomePicker) return {
       onNext: () => {
         const v = parseInt(customIncomeInput);
-        if (!isNaN(v) && v > 0) {
-          setIncome(v);
-          setTargetPension(Math.round(v * 0.8));
-          setPensionAssets([{ type: 'drv', provider: 'Schätzung via Gehalt', monthlyPayout: Math.round(v * 0.45), inflationAdjusted: true }]);
-          handleNext();
-        }
+        const salary = !isNaN(v) && v > 0 ? v : 2500;
+        setIncome(salary);
+        setTargetPension(Math.round(salary * 0.8));
+        setPensionAssets([{ type: 'drv', provider: 'Schätzung via Gehalt', monthlyPayout: Math.round(salary * 0.45), inflationAdjusted: true }]);
+        handleNext();
       },
-      nextDisabled: !customIncomeInput || parseInt(customIncomeInput) <= 0,
+      nextDisabled: false,
+      nextLabel: "Weiter",
+      onBack: handleBack,
+    };
+    if (step === 3 && importMethod === 'manual') return {
+      onNext: () => setShowIncomePicker(true),
+      nextDisabled: false,
       nextLabel: "Weiter",
       onBack: handleBack,
     };
@@ -255,8 +269,25 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
       nextLabel: "Werte übernehmen",
       onBack: handleBack,
     };
-    if (step === 3) return { onNext: undefined, nextDisabled: true, nextLabel: "Weiter", onBack: handleBack, hideNext: true };
+    if (step === 3 && dropState === 'processing') return {
+      onNext: undefined,
+      nextDisabled: true,
+      nextLabel: "Analysiere...",
+      onBack: handleBack,
+    };
+    if (step === 3) return {
+      onNext: () => { setDropState('processing'); setProcessingStep(0); },
+      nextDisabled: !docSelected && importMethod !== 'manual',
+      nextLabel: "Weiter",
+      onBack: handleBack,
+    };
     if (step === 4) return {
+      onNext: handleNext,
+      nextDisabled: !selectedEmployment,
+      nextLabel: "Weiter",
+      onBack: handleBack,
+    };
+    if (step === 5) return {
       onNext: () => {
         if (selectedBonusOption === 'yes') { setFoundBonus(85); handleNext(); }
         else if (selectedBonusOption === 'no') { setFoundBonus(0); handleNext(); }
@@ -265,7 +296,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
       nextLabel: "Weiter",
       onBack: handleBack,
     };
-    if (step === 5) return { onNext: handleNext, nextDisabled: false, nextLabel: "Weiter zum Dashboard", onBack: handleBack };
+    if (step === 6) return { onNext: handleNext, nextDisabled: false, nextLabel: "Weiter zum Dashboard", onBack: handleBack };
     return null;
   })();
 
@@ -274,7 +305,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
 
       {/* Progress Bar */}
       <div className="flex-none bg-white px-6 py-4">
-        {step > 1 && step < 6 && (
+        {step > 1 && step < 7 && (
           <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-black transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
           </div>
@@ -332,63 +363,121 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
         )}
 
         {/* SCHRITT 3: Magic Dropzone */}
-        {step === 3 && importMethod !== 'manual' && (
+        {step === 3 && !(importMethod === 'manual' && showIncomePicker) && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
 
             {dropState === 'idle' && (
               <>
                 <h1 className="text-2xl font-black text-black mb-2 leading-tight">Deine Vorsorgepapiere.</h1>
                 <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                  Lass unsere KI alle Rentendokumente auf einmal analysieren.
+                  {docSelected && importMethod === 'manual'
+                    ? 'Dokumente gespeichert — Weiter schätzt via Gehalt. Oder wähle nur Dokumente.'
+                    : docSelected
+                      ? 'Sieht gut aus! Drücke auf Weiter — KI startet die Analyse.'
+                      : 'Tippe auf die Kachel — unsere KI liest deine Rentendokumente automatisch aus.'}
                 </p>
 
-                {/* Drop-Area */}
+                {/* Kachel: leer → Tap → Docs fliegen rein */}
                 <button
-                  onClick={() => { setDropState('processing'); setProcessingStep(0); }}
-                  className="w-full border-2 border-dashed border-gray-300 hover:border-black rounded-3xl flex flex-col items-center justify-center py-12 px-6 gap-4 transition-all group cursor-pointer mb-4 bg-[#FAFAFA] hover:bg-gray-50"
+                  onClick={() => {
+                    if (!docSelected) setDocSelected(true);
+                    else if (importMethod === 'manual') setImportMethod(null); // tap wieder aktiviert Dokument-Pfad
+                  }}
+                  className={`w-full rounded-3xl transition-all mb-4 overflow-hidden ${
+                    docSelected && importMethod !== 'manual'
+                      ? 'border-2 border-black bg-black/[0.03] cursor-pointer p-5'
+                      : docSelected && importMethod === 'manual'
+                        ? 'border-2 border-dashed border-gray-400 bg-[#F9FAFB] cursor-pointer p-5 opacity-60'
+                        : 'border-2 border-dashed border-gray-300 hover:border-black bg-[#FAFAFA] hover:bg-gray-50 cursor-pointer flex flex-col items-center justify-center py-12 px-6 gap-4'
+                  }`}
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-[#F4F4F5] group-hover:bg-black flex items-center justify-center transition-all duration-300">
-                    <UploadCloud size={26} className="text-gray-400 group-hover:text-white transition-colors" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[15px] font-bold text-black mb-1">
-                      Zieh einfach alles hier rein, was nach Rente aussieht.
-                    </p>
-                    <p className="text-[12px] text-gray-400">Unsere KI erledigt den Rest.</p>
-                  </div>
-                  <span className="text-[11px] bg-[#F4F4F5] group-hover:bg-black group-hover:text-white px-3 py-1.5 rounded-full font-bold text-gray-500 transition-all">
-                    Zum Simulieren klicken
-                  </span>
+                  {!docSelected ? (
+                    <>
+                      <div className="w-14 h-14 rounded-2xl bg-[#F4F4F5] flex items-center justify-center">
+                        <FileText size={26} className="text-gray-400" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[15px] font-bold text-black mb-1">Rentendokumente einlesen</p>
+                        <p className="text-[12px] text-gray-400">Einfach antippen — KI erledigt den Rest.</p>
+                      </div>
+                      <span className="text-[11px] bg-[#F4F4F5] px-3 py-1.5 rounded-full font-bold text-gray-500">
+                        Jetzt starten
+                      </span>
+                    </>
+                  ) : (
+                    <div className="w-full">
+                      {/* Kachel-Header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 size={14} className={importMethod === 'manual' ? 'text-gray-400' : 'text-emerald-500'} />
+                          <p className={`text-[12px] font-bold ${importMethod === 'manual' ? 'text-gray-400' : 'text-black'}`}>
+                            3 Dokumente bereit
+                          </p>
+                        </div>
+                        {importMethod === 'manual' && (
+                          <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold">
+                            Pausiert
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {[
+                          { label: 'DRV Renteninformation',       sub: 'Deutsche Rentenversicherung', dir: 'left'  },
+                          { label: 'Allianz bAV Standmitteilung', sub: 'Betriebliche Altersvorsorge', dir: 'right' },
+                          { label: 'Deka Riester-Bescheinigung',  sub: 'Riester-Rente',               dir: 'left'  },
+                        ].map((doc, idx) => (
+                          <div
+                            key={idx}
+                            className={`animate-in ${doc.dir === 'left' ? 'slide-in-from-left-8' : 'slide-in-from-right-8'} fade-in duration-700`}
+                            style={{ animationDelay: `${idx * 320}ms`, animationFillMode: 'both' }}
+                          >
+                            <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-3">
+                              <div className="w-9 h-9 bg-[#F9FAFB] rounded-xl flex items-center justify-center shrink-0">
+                                <FileText size={16} className="text-gray-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-[13px] text-black leading-tight truncate">{doc.label}</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">{doc.sub}</p>
+                              </div>
+                              <CheckCircle2 size={15} className={importMethod === 'manual' ? 'text-gray-300 shrink-0' : 'text-emerald-500 shrink-0'} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </button>
 
                 {/* Info-Link */}
-                <button
-                  onClick={() => setShowDocModal(true)}
-                  className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-black transition-colors mx-auto mb-6 cursor-pointer"
-                >
-                  <HelpCircle size={13} />
-                  Welche Dokumente kann ich hochladen?
-                </button>
+                {!docSelected && (
+                  <button
+                    onClick={() => setShowDocModal(true)}
+                    className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-black transition-colors mx-auto mb-6 cursor-pointer"
+                  >
+                    <HelpCircle size={13} />
+                    Welche Dokumente kann ich hochladen?
+                  </button>
+                )}
 
-                {/* Separator */}
+                {/* Separator + Keine Dokumente */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-px bg-gray-200 flex-1" />
                   <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Oder</span>
                   <div className="h-px bg-gray-200 flex-1" />
                 </div>
-
                 <OptionCard
                   emoji={<Calculator size={20} />}
                   title="Keine Dokumente zur Hand?"
                   subtitle="Über aktuelles Gehalt schätzen"
-                  onClick={() => setImportMethod('manual')}
+                  selected={importMethod === 'manual'}
+                  onClick={() => setImportMethod(importMethod === 'manual' ? null : 'manual')}
                 />
               </>
             )}
 
             {(dropState === 'processing' || dropState === 'done') && (
               <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-black text-black mb-2 leading-tight">KI-Analyse läuft.</h1>
+                <h1 className="text-2xl font-black text-black mb-2 leading-tight">Vorsorgepapiere werden analysiert.</h1>
                 <p className="text-sm text-gray-500 mb-8 leading-relaxed">
                   {dropState === 'processing' ? 'Analysiere 3 Dokumente...' : 'Alle Dokumente erkannt!'}
                 </p>
@@ -448,7 +537,7 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
         )}
 
         {/* SCHRITT 3: Manuelle Gehaltseingabe */}
-        {step === 3 && importMethod === 'manual' && (
+        {step === 3 && importMethod === 'manual' && showIncomePicker && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
             <h1 className="text-2xl font-black text-black mb-3 leading-tight">Wie hoch ist dein aktuelles Netto-Einkommen?</h1>
             <p className="text-sm text-gray-500 mb-3 leading-relaxed">Wir schätzen daraus deine gesetzliche Rente und berechnen dein Rentenziel.</p>
@@ -462,8 +551,39 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
           </div>
         )}
 
-        {/* SCHRITT 4: Versteckte Rentenpunkte */}
+        {/* SCHRITT 4: Arbeitgeber */}
         {step === 4 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <h1 className="text-2xl font-black text-black mb-3 leading-tight">Wo arbeitest du gerade?</h1>
+            <p className="text-sm text-gray-500 mb-8 leading-relaxed">Damit wir die richtigen Rentenbausteine für dich aktivieren.</p>
+            <div className="space-y-3">
+              <OptionCard
+                emoji={<Briefcase size={20} />}
+                title="Angestellt (Privatwirtschaft)"
+                subtitle="bAV & VL möglich"
+                selected={selectedEmployment === 'employed'}
+                onClick={() => setSelectedEmployment('employed')}
+              />
+              <OptionCard
+                emoji={<Building2 size={20} />}
+                title="Öffentlicher Dienst / Beamtenstatus"
+                subtitle="VBL-Pflichtversicherung aktiv"
+                selected={selectedEmployment === 'public'}
+                onClick={() => setSelectedEmployment('public')}
+              />
+              <OptionCard
+                emoji={<Calculator size={20} />}
+                title="Selbstständig / Freiberuflich"
+                subtitle="Freiwillige DRV oder Rürup-Rente"
+                selected={selectedEmployment === 'selfEmployed'}
+                onClick={() => setSelectedEmployment('selfEmployed')}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* SCHRITT 5: Versteckte Rentenpunkte */}
+        {step === 5 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
             <div className="flex items-start justify-between gap-3 mb-3">
               <h1 className="text-2xl font-black text-black leading-tight">Lass uns verstecktes Geld finden.</h1>
@@ -482,8 +602,8 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
           </div>
         )}
 
-        {/* SCHRITT 5: Bonus-Bestätigung */}
-        {step === 5 && (
+        {/* SCHRITT 6: Bonus-Bestätigung */}
+        {step === 6 && (
           <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col flex-1 justify-center text-center">
             {foundBonus > 0 ? (
               <>
@@ -507,8 +627,8 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
           </div>
         )}
 
-        {/* SCHRITT 6: Finaler Ladescreen */}
-        {step === 6 && (
+        {/* SCHRITT 7: Finaler Ladescreen */}
+        {step === 7 && (
           <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
             <div className="relative mb-8">
               <div className="absolute inset-0 bg-black/10 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
