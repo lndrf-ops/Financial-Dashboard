@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import { Asset } from "./AssetBreakdown";
@@ -9,6 +9,7 @@ interface InvestViewProps {
 }
 
 export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
+  const [showTRModal, setShowTRModal] = useState(false);
   const hasCrypto = assets.some(a => a.id === "crypto" && a.accumulatedValue > 0);
 
   const etfShare = hasCrypto ? Math.round(monthlyContribution * 0.8) : monthlyContribution;
@@ -111,7 +112,7 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
               <div className="text-right flex items-center gap-3 shrink-0">
                 <div>
                   <p className="font-bold text-[15px] text-black">€ {etfShare}</p>
-                  <p className="text-xs text-emerald-600">+12,4% p.a.</p>
+                  <p className="text-xs text-emerald-600">≈ 7% p.a.</p>
                 </div>
                 <ChevronRight size={16} className="text-gray-300" />
               </div>
@@ -131,7 +132,7 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
                 <div className="text-right flex items-center gap-3 shrink-0">
                   <div>
                     <p className="font-bold text-[15px] text-black">€ {cryptoShare}</p>
-                    <p className="text-xs text-emerald-600">+45,2% p.a.</p>
+                    <p className="text-xs text-emerald-600">≈ 15% p.a. (hist.)</p>
                   </div>
                   <ChevronRight size={16} className="text-gray-300" />
                 </div>
@@ -139,9 +140,28 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
             )}
           </div>
 
-          <button onClick={() => window.open('https://app.traderepublic.com', '_blank')} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-[15px] py-4 rounded-xl mt-4 transition-colors flex justify-center items-center gap-2 cursor-pointer">
+          <button onClick={() => setShowTRModal(true)} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-[15px] py-4 rounded-xl mt-4 transition-colors flex justify-center items-center gap-2 cursor-pointer">
             In Trade Republic öffnen <ArrowRight size={18} />
           </button>
+
+          {showTRModal && (
+            <div className="fixed inset-0 z-[200] flex items-end justify-center animate-in fade-in duration-200" onClick={() => setShowTRModal(false)}>
+              <div className="absolute inset-0 bg-black/30" />
+              <div className="relative bg-white rounded-t-3xl px-6 pt-7 pb-10 w-full max-w-[430px] animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+                <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-6" />
+                <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center mb-4">
+                  <ArrowRight size={18} className="text-white" />
+                </div>
+                <h3 className="text-[20px] font-black text-black mb-2">Weiterleitung zur TR App</h3>
+                <p className="text-[14px] text-gray-500 leading-relaxed mb-8">
+                  In der finalen App öffnet sich hier dein Trade Republic Depot — der Sparplan wird automatisch mit deinen Einstellungen vorausgefüllt.
+                </p>
+                <button onClick={() => setShowTRModal(false)} className="w-full bg-black text-white font-extrabold text-[15px] py-4 rounded-xl cursor-pointer">
+                  Verstanden
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

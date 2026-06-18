@@ -41,7 +41,7 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
       </div>
       <div>
         <p className="font-bold text-[14px] text-emerald-700 leading-tight">Antrag gesendet!</p>
-        <p className="text-[11px] text-emerald-600 mt-0.5">{title} · hr@techstartup-berlin.de</p>
+        <p className="text-[11px] text-emerald-600 mt-0.5">{title} · hr@deinunternehmen.de</p>
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
         : <PendingCard
             type="vl"
             title="Antrag auf VL-Sparen"
-            subtitle="hr@techstartup-berlin.de · Kostenlos"
+            subtitle="hr@deinunternehmen.de · Kostenlos"
             bullets={["Bis zu 40 € monatlich vom Arbeitgeber", "Fließt direkt in deinen ETF-Sparplan", "Bearbeitungszeit: 2–4 Wochen"]}
           />
       )}
@@ -97,7 +97,7 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
         : <PendingCard
             type="bav"
             title="Antrag auf Entgeltumwandlung"
-            subtitle={`hr@techstartup-berlin.de · ${bavNetto} € netto`}
+            subtitle={`hr@deinunternehmen.de · ${bavNetto} € netto`}
             bullets={["Steuervorteile ab dem nächsten Gehalt", "Bruttoverzicht senkt deine Steuerlast", "Bearbeitungszeit: 2–4 Wochen"]}
           />
       )}

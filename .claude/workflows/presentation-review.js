@@ -10,7 +10,7 @@ export const meta = {
 };
 
 // ─── Strategischer Kontext ────────────────────────────────────────────────────
-// FutureMe ist ein Hochschulprojekt im Modul "Digital Business Innovation".
+// FutureMe ist ein Uniprojekt im Modul "Digital Business Innovation".
 // Das Team agiert als Trade Republic Innovationsteam und entwickelt eine
 // Altersvorsorge-App ("Unterapp") für den deutschen Otto Normalverbraucher (25–45 Jahre,
 // kein Finanzwissen, verdrängt das Thema Rente).

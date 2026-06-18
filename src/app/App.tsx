@@ -272,7 +272,7 @@ export default function App() {
   // Per-tab feature tutorial
   const [featureTutorialTab, setFeatureTutorialTab] = useState<string | null>(null);
   const [featureTutorialStep, setFeatureTutorialStep] = useState(0);
-  const [seenTabTutorials, setSeenTabTutorials] = useState<Set<string>>(new Set());
+  const [seenTabTutorials, setSeenTabTutorials] = useState<Set<string>>(new Set(['dashboard', 'invest', 'simulate', 'profile', 'chat']));
 
   const handleTabNav = (id: string) => {
     setActiveView(id as any);

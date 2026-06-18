@@ -325,7 +325,7 @@ export function OptimizationPlan({
                     </div>
                     <div>
                       <p className="font-black text-[15px] text-emerald-700 leading-tight">Antrag gesendet!</p>
-                      <p className="text-[12px] text-emerald-600 mt-0.5">An: hr@techstartup-berlin.de</p>
+                      <p className="text-[12px] text-emerald-600 mt-0.5">An: hr@deinunternehmen.de</p>
                     </div>
                   </div>
                 ) : (
@@ -336,7 +336,7 @@ export function OptimizationPlan({
                       </div>
                       <div>
                         <p className="font-black text-[15px] text-black leading-tight">Antrag auf VL-Sparen</p>
-                        <p className="text-[12px] text-gray-500 mt-0.5">hr@techstartup-berlin.de · Kostenlos</p>
+                        <p className="text-[12px] text-gray-500 mt-0.5">hr@deinunternehmen.de · Kostenlos</p>
                       </div>
                     </div>
                     <div className="space-y-2 mb-5">
@@ -374,7 +374,7 @@ export function OptimizationPlan({
                     </div>
                     <div>
                       <p className="font-black text-[15px] text-emerald-700 leading-tight">Antrag gesendet!</p>
-                      <p className="text-[12px] text-emerald-600 mt-0.5">An: hr@techstartup-berlin.de</p>
+                      <p className="text-[12px] text-emerald-600 mt-0.5">An: hr@deinunternehmen.de</p>
                     </div>
                   </div>
                 ) : (
@@ -385,7 +385,7 @@ export function OptimizationPlan({
                       </div>
                       <div>
                         <p className="font-black text-[15px] text-black leading-tight">Antrag auf Entgeltumwandlung</p>
-                        <p className="text-[12px] text-gray-500 mt-0.5">hr@techstartup-berlin.de · {bavNettoVerzicht[0]} € netto</p>
+                        <p className="text-[12px] text-gray-500 mt-0.5">hr@deinunternehmen.de · {bavNettoVerzicht[0]} € netto</p>
                       </div>
                     </div>
                     <div className="space-y-2 mb-5">

@@ -23,10 +23,9 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
   ];
 
   const handleAddEvent = (type: any, label: string, desc: string, cost: number) => {
-    const targetAge = Math.min(currentAge + 3, retirementAge - 1);
-    if (lifeEvents.some(e => e.age === targetAge)) {
-      alert("In diesem Lebensjahr ist bereits ein Ereignis geplant. Bitte verschiebe es zuerst.");
-      return;
+    let targetAge = Math.min(currentAge + 3, retirementAge - 1);
+    while (lifeEvents.some(e => e.age === targetAge) && targetAge < retirementAge - 1) {
+      targetAge++;
     }
     const newEvent: LifeEvent = { id: Math.random().toString(36).substring(7), age: targetAge, type, label, description: desc, cost };
     setLifeEvents([...lifeEvents, newEvent].sort((a, b) => a.age - b.age));
@@ -43,7 +42,7 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
       </div>
 
       <div className="px-6 pt-8">
-        <h2 className="text-[13px] text-black font-semibold uppercase tracking-widest mb-4">Makro-Stresstests</h2>
+        <h2 className="text-[13px] text-black font-semibold uppercase tracking-widest mb-4">Szenarien & Stresstests</h2>
         <p className="text-xs text-gray-500 mb-6 leading-relaxed">
           Aktiviere Extrem-Szenarien, um zu sehen, wie widerstandsfähig dein aktueller Finanzplan im Dashboard ist.
         </p>
@@ -81,8 +80,8 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
                 <Activity size={18} className="text-black" />
               </div>
               <div>
-                <p className="font-bold text-[14px] text-black">Langlebigkeitsrisiko</p>
-                <p className="text-[11px] text-gray-500">Kapital muss bis Alter 98 reichen</p>
+                <p className="font-bold text-[14px] text-black">Langes Leben einplanen</p>
+                <p className="text-[11px] text-gray-500">Kapital reicht bis Alter 98</p>
               </div>
             </div>
             <Switch checked={stressTests.longevity} onCheckedChange={(c) => setStressTests({ ...stressTests, longevity: c })} className="data-[state=checked]:bg-black" />

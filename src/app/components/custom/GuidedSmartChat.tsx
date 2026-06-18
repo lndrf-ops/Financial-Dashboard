@@ -176,7 +176,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     if (found) {
       postMessage(text, found.botReply, found.execute);
     } else {
-      postMessage(text, "Dafür bin ich im aktuellen Prototyp noch nicht trainiert. Nutze am besten meine Vorschläge über dem Textfeld!");
+      postMessage(text, "Das kann ich dir gerade nicht beantworten — frag mich nach deiner Sparrate, deinem Rentenalter oder einem Szenario wie einem Marktcrash.");
     }
   };
 
