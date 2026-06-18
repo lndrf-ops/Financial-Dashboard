@@ -11,6 +11,91 @@ import { ProfileView } from "./components/custom/ProfileView";
 import { AIOnboarding, AIOnboardingData } from "./components/custom/AIOnboarding";
 import { PersonalDataView } from "./components/custom/PersonalDataView";
 
+// ─── Tutorial ────────────────────────────────────────────────────────────────
+
+type DashboardView = 'dashboard' | 'invest' | 'simulate' | 'profile';
+
+const TUTORIAL_STEPS: { title: string; text: string; view: DashboardView }[] = [
+  {
+    title: "Deine Rente auf einen Blick.",
+    text: "Hier siehst du deine monatliche Kaufkraft im Alter. Deine gesetzliche und betriebliche Rente werden mit deinem ETF-Sparplan kombiniert.",
+    view: 'dashboard',
+  },
+  {
+    title: "Dein Geld arbeitet für dich.",
+    text: "Passe deine monatliche Sparrate an und verfolge, wie der Zinseszins dein privates Vermögen über die Jahre skaliert.",
+    view: 'invest',
+  },
+  {
+    title: "Was wäre, wenn...?",
+    text: "Das Leben passiert. Simuliere Auszeiten, Immobilienkäufe oder Marktcrashs und sieh sofort die Auswirkungen auf deine Rente.",
+    view: 'simulate',
+  },
+  {
+    title: "Deine Daten, deine Kontrolle.",
+    text: "Passe Renteneintrittsalter, Inflation und Lebenserwartung an. Du hast jederzeit die volle Kontrolle über alle Annahmen.",
+    view: 'profile',
+  },
+];
+
+function TutorialOverlay({
+  step,
+  onNext,
+  onComplete,
+}: {
+  step: number;
+  onNext: () => void;
+  onComplete: () => void;
+}) {
+  const current = TUTORIAL_STEPS[step];
+  const isLast = step === TUTORIAL_STEPS.length - 1;
+
+  return (
+    <>
+      {/* Dim background */}
+      <div className="fixed inset-0 bg-slate-950/40 z-[90]" />
+
+      {/* Bottom sheet */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[100] bg-slate-950/85 backdrop-blur-xl border-t border-slate-800 rounded-t-3xl px-6 pt-7 pb-10 animate-in slide-in-from-bottom-8 fade-in duration-300">
+        {/* Pagination pill-dots */}
+        <div className="flex justify-center items-center gap-2 mb-7">
+          {TUTORIAL_STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === step ? 'w-6 bg-white' : 'w-1.5 bg-slate-700'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Step content – key forces re-animation on step change */}
+        <div key={step} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+            Schritt {step + 1} von {TUTORIAL_STEPS.length}
+          </p>
+          <h2 className="text-[22px] font-black text-white tracking-tight leading-tight mb-3">
+            {current.title}
+          </h2>
+          <p className="text-[14px] text-slate-400 leading-relaxed mb-8">
+            {current.text}
+          </p>
+        </div>
+
+        {/* CTA */}
+        <button
+          onClick={isLast ? onComplete : onNext}
+          className="w-full bg-white text-slate-950 font-extrabold text-[15px] py-4 rounded-xl transition-all active:scale-[0.98] cursor-pointer"
+        >
+          {isLast ? 'Verstanden' : 'Weiter'}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── Confetti ─────────────────────────────────────────────────────────────────
+
 function Confetti() {
   const colors = ['#000000', '#374151', '#6B7280', '#10b981', '#f59e0b', '#f43f5e'];
   return (
@@ -44,6 +129,8 @@ function Confetti() {
   );
 }
 
+// ─── App ──────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [activeView, setActiveView] = useState<'welcome' | 'aionboarding' | 'onboarding' | 'dashboard' | 'optimize' | 'invest' | 'simulate' | 'profile' | 'personalData'>('welcome');
   const [notification, setNotification] = useState<string | null>(null);
@@ -51,16 +138,20 @@ export default function App() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
 
+  // Tutorial state
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+
   const [userName, setUserName] = useState("Lena");
   const [currentAge, setCurrentAge] = useState(30);
   const [inflation, setInflation] = useState([2.5]);
   const [retirementAge, setRetirementAge] = useState([67]);
-  const [lifeExpectancy, setLifeExpectancy] = useState([85]); 
-  const [monthlyContribution, setMonthlyContribution] = useState([150]); 
-  const [dynamicSavings, setDynamicSavings] = useState(false); 
-  const [expectedReturn, setExpectedReturn] = useState([7.0]); 
+  const [lifeExpectancy, setLifeExpectancy] = useState([85]);
+  const [monthlyContribution, setMonthlyContribution] = useState([150]);
+  const [dynamicSavings, setDynamicSavings] = useState(false);
+  const [expectedReturn, setExpectedReturn] = useState([7.0]);
   const [targetPensionReal, setTargetPensionReal] = useState([2100]);
-  
+
   const [vlActive, setVlActive] = useState(false);
   const [bavNettoVerzicht, setBavNettoVerzicht] = useState([0]);
   const [drvBonus, setDrvBonus] = useState(0);
@@ -71,12 +162,23 @@ export default function App() {
 
   const [dynamicAssets, setDynamicAssets] = useState<Asset[]>([
     { id: "statutory", name: "Gesetzliche Rente", subtitle: "Via PDF-Scan (Netto)", icon: Building2, payout: 0, accumulatedLabel: "Beiträge", accumulatedValue: 0 },
-    { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: 0 }, 
+    { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: 0 },
     { id: "company", name: "Betriebliche Rente", subtitle: "Entgeltumwandlung", icon: Briefcase, payout: 0, accumulatedLabel: "Angespartes Kapital", accumulatedValue: 0 },
     { id: "realestate", name: "Immobilie", subtitle: "Eigenheim / Vermietung", icon: Home, payout: 0, accumulatedLabel: "Immobilienwert", accumulatedValue: 0 },
     { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: 0 },
     { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Portfolio", accumulatedValue: 0 }
   ]);
+
+  const handleTutorialNext = () => {
+    const nextStep = tutorialStep + 1;
+    setTutorialStep(nextStep);
+    setActiveView(TUTORIAL_STEPS[nextStep].view);
+  };
+
+  const handleTutorialComplete = () => {
+    setShowTutorial(false);
+    setActiveView('dashboard');
+  };
 
   const triggerNotification = (msg: string) => {
     setNotification(msg);
@@ -94,7 +196,6 @@ export default function App() {
     const etfStart = Math.round(data.initialCapital * 0.8);
     const cashStart = data.initialCapital - etfStart;
 
-    // Über pensionAssets iterieren: DRV → statutory, alles andere → company
     const drvPayout = data.pensionAssets.find(a => a.type === 'drv')?.monthlyPayout ?? 0;
     const otherPayout = data.pensionAssets
       .filter(a => a.type !== 'drv')
@@ -108,6 +209,8 @@ export default function App() {
       { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: cashStart },
       { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Wallet", accumulatedValue: 0 }
     ]);
+    setTutorialStep(0);
+    setShowTutorial(true);
     setActiveView('dashboard');
   };
 
@@ -117,16 +220,18 @@ export default function App() {
     setRetirementAge([p.targetAge]);
     setMonthlyContribution([p.monthlySavings]);
     setTargetPensionReal([p.targetPension]);
-    setLifeEvents([]); 
+    setLifeEvents([]);
     setStressTests({ bearMarket: false, highInflation: false, longevity: false });
     setDynamicAssets([
       { id: "statutory", name: "Gesetzliche Rente", subtitle: "Deutsche Rentenversicherung", icon: Building2, payout: p.assets.statutoryPayout, accumulatedLabel: "Beiträge", accumulatedValue: p.assets.statutoryAcc },
-      { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: p.assets.etfAcc }, 
+      { id: "etf", name: "Weltweites Portfolio", subtitle: "Privater Vermögensaufbau", icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert", accumulatedValue: p.assets.etfAcc },
       { id: "company", name: "Betriebliche Rente", subtitle: "Entgeltumwandlung", icon: Briefcase, payout: p.assets.companyPayout, accumulatedLabel: "Kapital", accumulatedValue: p.assets.companyAcc },
       { id: "realestate", name: "Immobilie", subtitle: "Eigenheim / Vermietung", icon: Home, payout: p.assets.realestatePayout, accumulatedLabel: "Verkehrswert", accumulatedValue: p.assets.realestateAcc },
       { id: "cash", name: "Tagesgeld", subtitle: "Sichere Liquidität", icon: Landmark, payout: 0, accumulatedLabel: "Start-Guthaben", accumulatedValue: p.assets.cashAcc },
       { id: "crypto", name: "Kryptowährungen", subtitle: "Bitcoin & Altcoins", icon: Bitcoin, payout: 0, accumulatedLabel: "Wallet", accumulatedValue: p.assets.cryptoAcc }
     ]);
+    setTutorialStep(0);
+    setShowTutorial(true);
     setActiveView('dashboard');
   };
 
@@ -144,10 +249,10 @@ export default function App() {
       return asset;
     }));
     triggerNotification(`${type === 'drv' ? 'DRV-Rente' : 'bAV'} erfolgreich synchronisiert!`);
-    setActiveView('dashboard'); 
+    setActiveView('dashboard');
   };
 
-  // --- FINANZMATHEMATIK (via usePensionMath Hook) ---
+  // --- FINANZMATHEMATIK ---
   const {
     capitalAtRetirement,
     additionalMonthlyPayoutNominal,
@@ -179,25 +284,22 @@ export default function App() {
 
   const activeLifeExpectancy = stressTests.longevity ? 98 : lifeExpectancy[0];
 
-  // Asset-spezifische Werte für Ring-Chart-Segmente (direkt aus dynamicAssets)
   const statutoryValue   = dynamicAssets.find(a => a.id === 'statutory')?.payout   ?? 0;
   const companyValue     = dynamicAssets.find(a => a.id === 'company')?.payout     ?? 0;
   const realEstatePayout = dynamicAssets.find(a => a.id === 'realestate')?.payout  ?? 0;
 
-  // Werte für das Asset Breakdown
   const displayAssets = dynamicAssets.map(asset => {
     if (asset.id === "etf") {
-      return { 
-        ...asset, 
-        payout: Math.round(additionalMonthlyPayoutNominal), 
+      return {
+        ...asset,
+        payout: Math.round(additionalMonthlyPayoutNominal),
         accumulatedValue: Math.round(capitalAtRetirement),
-        accumulatedLabel: "Endkapital" // <-- Prognostiziert entfernt
+        accumulatedLabel: "Endkapital"
       };
     }
     return asset;
   });
 
-  // SVG Progress Ring Berechnungen
   const percentage = Math.round((realPurchasingPowerMonthly / targetPensionReal[0]) * 100);
   const cappedPercentage = Math.min(percentage, 100);
   const ringRadius = 80;
@@ -216,7 +318,6 @@ export default function App() {
     percentage >= 40  ? ['#f97316', '#fb923c', '#fdba74', '#fed7aa'] :
                         ['#ef4444', '#f87171', '#fca5a5', '#fecaca'];
 
-  // Alle Quellen mit inflationFactor skalieren → Summe ergibt realPurchasingPowerMonthly
   const rawSources = [
     { label: "Gesetzl. Rente", value: Math.round(statutoryValue * inflationFactor) },
     { label: "Portfolio",      value: Math.round(additionalMonthlyPayoutNominal * inflationFactor) },
@@ -243,7 +344,6 @@ export default function App() {
       setNotification("Glückwunsch! Deine Rentenlücke ist geschlossen. 🎯");
       setHasShownSuccessToast(true);
       setShowConfetti(true);
-      
       setTimeout(() => setShowConfetti(false), 4500);
       setTimeout(() => setNotification(null), 5500);
     } else if (!isPositive && hasShownSuccessToast) {
@@ -312,6 +412,15 @@ export default function App() {
     <div className="bg-white min-h-screen text-black max-w-[430px] mx-auto font-sans overflow-x-hidden relative">
 
       {showConfetti && <Confetti />}
+
+      {/* Tutorial overlay — sits above everything except confetti */}
+      {showTutorial && (
+        <TutorialOverlay
+          step={tutorialStep}
+          onNext={handleTutorialNext}
+          onComplete={handleTutorialComplete}
+        />
+      )}
 
       {notification && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[380px] z-[100] bg-white border border-gray-200 backdrop-blur-xl rounded-2xl p-4 flex items-start gap-3 shadow-xl transition-all animate-in fade-in slide-in-from-top-4">
@@ -477,10 +586,10 @@ export default function App() {
 
       {activeView === 'invest' && <div className="pb-24"><InvestView monthlyContribution={monthlyContribution[0]} assets={dynamicAssets} /></div>}
       {activeView === 'simulate' && <div className="pb-24"><SimulateView currentAge={currentAge} retirementAge={retirementAge[0]} lifeEvents={lifeEvents} setLifeEvents={setLifeEvents} stressTests={stressTests} setStressTests={setStressTests} /></div>}
-      
+
       {activeView === 'profile' && (
         <div className="pb-24">
-          <ProfileView 
+          <ProfileView
             inflation={inflation} setInflation={setInflation}
             retirementAge={retirementAge} setRetirementAge={setRetirementAge}
             monthlyContribution={monthlyContribution} setMonthlyContribution={setMonthlyContribution}

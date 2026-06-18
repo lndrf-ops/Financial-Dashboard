@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import {
   Loader2, ArrowLeft, ChevronRight, FileText, X, EyeOff, AlertTriangle,
   CheckCircle2, GraduationCap, Wrench, HelpCircle, Calculator,
-  TrendingUp, UploadCloud, Building2, Shield,
+  TrendingUp, UploadCloud, Building2, Shield, Briefcase,
 } from "lucide-react";
 
 export interface PensionAsset {
