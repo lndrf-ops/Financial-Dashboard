@@ -1,0 +1,158 @@
+import { useState, useEffect } from 'react';
+import { Building2, TrendingUp, Briefcase, Home, Landmark, Bitcoin } from 'lucide-react';
+import { Asset } from '../components/custom/AssetBreakdown';
+import { AIOnboardingData } from '../components/custom/AIOnboarding';
+import { Persona } from '../components/custom/Onboarding';
+import { LifeEvent, StressTests } from '../components/custom/SimulateView';
+
+export type AppView =
+  | 'welcome' | 'aionboarding' | 'onboarding' | 'dashboard'
+  | 'optimize' | 'invest' | 'simulate' | 'profile' | 'personalData' | 'chat';
+
+const DEFAULT_ASSETS: Asset[] = [
+  { id: "statutory",  name: "Gesetzliche Rente",    subtitle: "Via PDF-Scan (Netto)",       icon: Building2, payout: 0, accumulatedLabel: "Beiträge",          accumulatedValue: 0 },
+  { id: "etf",        name: "Weltweites Portfolio",  subtitle: "Privater Vermögensaufbau",   icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert",   accumulatedValue: 0 },
+  { id: "company",    name: "Betriebliche Rente",    subtitle: "Entgeltumwandlung",          icon: Briefcase, payout: 0, accumulatedLabel: "Angespartes Kapital",accumulatedValue: 0 },
+  { id: "realestate", name: "Immobilie",             subtitle: "Eigenheim / Vermietung",     icon: Home,      payout: 0, accumulatedLabel: "Immobilienwert",     accumulatedValue: 0 },
+  { id: "cash",       name: "Tagesgeld",             subtitle: "Sichere Liquidität",         icon: Landmark,  payout: 0, accumulatedLabel: "Start-Guthaben",     accumulatedValue: 0 },
+  { id: "crypto",     name: "Kryptowährungen",       subtitle: "Bitcoin & Altcoins",         icon: Bitcoin,   payout: 0, accumulatedLabel: "Portfolio",          accumulatedValue: 0 },
+];
+
+export function useAppState() {
+  const [activeView, setActiveView] = useState<AppView>('welcome');
+  const [notification, setNotification] = useState<string | null>(null);
+  const [hasShownSuccessToast, setHasShownSuccessToast] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [chatResetKey, setChatResetKey] = useState(0);
+
+  // User / pension params
+  const [userName, setUserName] = useState('Lena');
+  const [currentAge, setCurrentAge] = useState(32);
+  const [inflation, setInflation] = useState([2.5]);
+  const [retirementAge, setRetirementAge] = useState([67]);
+  const [lifeExpectancy, setLifeExpectancy] = useState([85]);
+  const [monthlyContribution, setMonthlyContribution] = useState([150]);
+  const [dynamicSavings, setDynamicSavings] = useState(false);
+  const [expectedReturn, setExpectedReturn] = useState([7.0]);
+  const [targetPensionReal, setTargetPensionReal] = useState([2100]);
+  const [vlActive, setVlActive] = useState(false);
+  const [bavNettoVerzicht, setBavNettoVerzicht] = useState([0]);
+  const [drvBonus, setDrvBonus] = useState(0);
+  const [lifeEvents, setLifeEvents] = useState<LifeEvent[]>([]);
+  const [stressTests, setStressTests] = useState<StressTests>({ bearMarket: false, highInflation: false, longevity: false });
+  const [dynamicAssets, setDynamicAssets] = useState<Asset[]>(DEFAULT_ASSETS);
+
+  const bavBruttoInvest = Math.round(bavNettoVerzicht[0] * 2.1);
+
+  const triggerNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleAIOnboardingComplete = (data: AIOnboardingData) => {
+    setDrvBonus(data.drvBonus);
+    setCurrentAge(data.age);
+    setMonthlyContribution([data.monthlySavings]);
+    setTargetPensionReal([data.targetPension]);
+    setLifeEvents([]);
+    setStressTests({ bearMarket: false, highInflation: false, longevity: false });
+
+    const etfStart  = Math.round(data.initialCapital * 0.8);
+    const cashStart = data.initialCapital - etfStart;
+    const drvPayout = data.pensionAssets.find(a => a.type === 'drv')?.monthlyPayout ?? 0;
+    const otherPayout = data.pensionAssets.filter(a => a.type !== 'drv').reduce((s, a) => s + a.monthlyPayout, 0);
+
+    let companyAsset: Asset;
+    let toastMsg: string;
+
+    if (data.employmentType === 'public') {
+      const vblPayout = otherPayout > 0 ? otherPayout : Math.round(drvPayout * 0.12);
+      companyAsset = { id: "company", name: "VBL-Versicherung", subtitle: "Pflichtversicherung öffentl. Dienst", icon: Briefcase, payout: vblPayout, accumulatedLabel: "Angespartes Kapital", accumulatedValue: vblPayout > 0 ? vblPayout * 120 : 8000 };
+      toastMsg = "VBL-Pflichtversicherung erkannt & aktiviert";
+      setVlActive(false);
+    } else if (data.employmentType === 'selfEmployed') {
+      companyAsset = { id: "company", name: "Rürup-Rente", subtitle: "Steuerlich gefördert (§ 10 EStG)", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Angespartes Kapital", accumulatedValue: otherPayout > 0 ? otherPayout * 120 : 0 };
+      toastMsg = "Rürup-Rente als Vorsorgeweg eingetragen";
+      setVlActive(false);
+    } else {
+      companyAsset = { id: "company", name: "Betriebliche Rente", subtitle: "bAV & VL verfügbar", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Kapital", accumulatedValue: otherPayout > 0 ? 15000 : 0 };
+      toastMsg = "bAV & VL für dich freigeschaltet";
+      setVlActive(true);
+    }
+
+    setDynamicAssets([
+      { id: "statutory",  name: "Gesetzliche Rente",  subtitle: "Via KI-Scan (Netto)",       icon: Building2,  payout: drvPayout, accumulatedLabel: "Beiträge",      accumulatedValue: drvPayout * 40 },
+      { id: "etf",        name: "Weltweites Portfolio",subtitle: "Privater Vermögensaufbau",  icon: TrendingUp, payout: 0,         accumulatedLabel: "Start-Depotwert",accumulatedValue: etfStart },
+      companyAsset,
+      { id: "realestate", name: "Immobilie",           subtitle: "Eigenheim / Vermietung",   icon: Home,       payout: 0,         accumulatedLabel: "Verkehrswert",   accumulatedValue: 0 },
+      { id: "cash",       name: "Tagesgeld",           subtitle: "Sichere Liquidität",        icon: Landmark,   payout: 0,         accumulatedLabel: "Start-Guthaben", accumulatedValue: cashStart },
+      { id: "crypto",     name: "Kryptowährungen",     subtitle: "Bitcoin & Altcoins",        icon: Bitcoin,    payout: 0,         accumulatedLabel: "Wallet",         accumulatedValue: 0 },
+    ]);
+    triggerNotification(toastMsg);
+    setActiveView('dashboard');
+  };
+
+  const handleLoadPersona = (p: Persona) => {
+    setUserName(p.name);
+    setCurrentAge(p.age);
+    setRetirementAge([p.targetAge]);
+    setMonthlyContribution([p.monthlySavings]);
+    setTargetPensionReal([p.targetPension]);
+    setLifeEvents([]);
+    setStressTests({ bearMarket: false, highInflation: false, longevity: false });
+    setDynamicAssets([
+      { id: "statutory",  name: "Gesetzliche Rente",    subtitle: "Deutsche Rentenversicherung", icon: Building2,  payout: p.assets.statutoryPayout, accumulatedLabel: "Beiträge",      accumulatedValue: p.assets.statutoryAcc },
+      { id: "etf",        name: "Weltweites Portfolio",  subtitle: "Privater Vermögensaufbau",   icon: TrendingUp, payout: 0,                         accumulatedLabel: "Start-Depotwert",accumulatedValue: p.assets.etfAcc },
+      { id: "company",    name: "Betriebliche Rente",    subtitle: "Entgeltumwandlung",          icon: Briefcase,  payout: p.assets.companyPayout,    accumulatedLabel: "Kapital",       accumulatedValue: p.assets.companyAcc },
+      { id: "realestate", name: "Immobilie",             subtitle: "Eigenheim / Vermietung",     icon: Home,       payout: p.assets.realestatePayout, accumulatedLabel: "Verkehrswert",  accumulatedValue: p.assets.realestateAcc },
+      { id: "cash",       name: "Tagesgeld",             subtitle: "Sichere Liquidität",         icon: Landmark,   payout: 0,                         accumulatedLabel: "Start-Guthaben",accumulatedValue: p.assets.cashAcc },
+      { id: "crypto",     name: "Kryptowährungen",       subtitle: "Bitcoin & Altcoins",         icon: Bitcoin,    payout: 0,                         accumulatedLabel: "Wallet",        accumulatedValue: p.assets.cryptoAcc },
+    ]);
+    setActiveView('dashboard');
+  };
+
+  const handleUpdateAsset = (id: string, payout: number, accumulatedValue: number) => {
+    setDynamicAssets(prev => prev.map(a => a.id === id ? { ...a, payout, accumulatedValue } : a));
+  };
+
+  const handleDataSync = (payout: number, accumulated: number, type: 'drv' | 'bav') => {
+    setDynamicAssets(prev => prev.map(a => {
+      if (type === 'drv' && a.id === 'statutory') return { ...a, payout, accumulatedValue: accumulated };
+      if (type === 'bav' && a.id === 'company')   return { ...a, payout, accumulatedValue: accumulated };
+      return a;
+    }));
+    triggerNotification(`${type === 'drv' ? 'DRV-Rente' : 'bAV'} erfolgreich synchronisiert!`);
+    setActiveView('dashboard');
+  };
+
+  return {
+    activeView, setActiveView,
+    notification, setNotification,
+    showConfetti, setShowConfetti,
+    hasShownSuccessToast, setHasShownSuccessToast,
+    showLogoutConfirm, setShowLogoutConfirm,
+    chatResetKey, setChatResetKey,
+    userName,
+    currentAge,
+    inflation, setInflation,
+    retirementAge, setRetirementAge,
+    lifeExpectancy, setLifeExpectancy,
+    monthlyContribution, setMonthlyContribution,
+    dynamicSavings, setDynamicSavings,
+    expectedReturn, setExpectedReturn,
+    targetPensionReal, setTargetPensionReal,
+    vlActive, setVlActive,
+    bavNettoVerzicht, setBavNettoVerzicht,
+    bavBruttoInvest,
+    drvBonus,
+    lifeEvents, setLifeEvents,
+    stressTests, setStressTests,
+    dynamicAssets,
+    triggerNotification,
+    handleAIOnboardingComplete,
+    handleLoadPersona,
+    handleUpdateAsset,
+    handleDataSync,
+  };
+}
