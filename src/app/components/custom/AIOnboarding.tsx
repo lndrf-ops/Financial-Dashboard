@@ -29,7 +29,7 @@ interface AIOnboardingProps {
 }
 
 // Mock-Werte aus dem TR-Ökosystem
-const TR_AGE = 28;
+const TR_AGE = 32;
 const TR_SAVINGS = 150;
 
 const MOCK_DETECTED: PensionAsset[] = [
@@ -369,13 +369,19 @@ export function AIOnboarding({ onComplete, onSwitchToPersonas }: AIOnboardingPro
             {dropState === 'idle' && (
               <>
                 <h1 className="text-2xl font-black text-black mb-2 leading-tight">Deine Vorsorgepapiere.</h1>
-                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                <p className="text-sm text-gray-500 mb-4 leading-relaxed">
                   {docSelected && importMethod === 'manual'
                     ? 'Dokumente gespeichert — Weiter schätzt via Gehalt. Oder wähle nur Dokumente.'
                     : docSelected
                       ? 'Sieht gut aus! Drücke auf Weiter — KI startet die Analyse.'
                       : 'Tippe auf die Kachel — unsere KI liest deine Rentendokumente automatisch aus.'}
                 </p>
+                {!docSelected && (
+                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Vorschau</span>
+                    <span className="text-[11px] text-amber-700 leading-tight">In der finalen App lädt TR deine Dokumente automatisch aus deiner Dokumentenablage.</span>
+                  </div>
+                )}
 
                 {/* Kachel: leer → Tap → Docs fliegen rein */}
                 <button

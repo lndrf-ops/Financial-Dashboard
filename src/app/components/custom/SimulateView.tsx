@@ -47,14 +47,14 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
           Aktiviere Extrem-Szenarien, um zu sehen, wie widerstandsfähig dein aktueller Finanzplan im Dashboard ist.
         </p>
 
-        <div className="space-y-3 mb-10">
+        <div id="tutorial-simulate-stresstests" className="space-y-3 mb-10">
           <div className="bg-[#F9FAFB] rounded-2xl p-4 border border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
                 <TrendingDown size={18} className="text-red-500" />
               </div>
               <div>
-                <p className="font-bold text-[14px] text-black">Bärenmarkt (-20%)</p>
+                <p className="font-bold text-[14px] text-black">Börsencrash (-20%)</p>
                 <p className="text-[11px] text-gray-500">Crash kurz vor Renteneintritt</p>
               </div>
             </div>
@@ -88,6 +88,7 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
           </div>
         </div>
 
+        <div id="tutorial-simulate-events">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[13px] text-black font-semibold uppercase tracking-widest">Biografie & Events</h2>
           <button onClick={() => setShowAddMenu(!showAddMenu)} className="w-8 h-8 rounded-full bg-[#F4F4F5] border border-gray-200 flex items-center justify-center text-black hover:bg-gray-200 transition-colors">
@@ -153,6 +154,7 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
             })
           )}
         </div>
+        </div>{/* tutorial-simulate-events */}
       </div>
     </div>
   );

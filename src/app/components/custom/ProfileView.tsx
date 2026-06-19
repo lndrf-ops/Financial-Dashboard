@@ -119,6 +119,7 @@ export function ProfileView(props: ProfileViewProps) {
       </div>
 
       <div className="px-6 pt-6 space-y-4">
+        <div id="tutorial-profile-account">
         <CollapsibleSection title="Account" defaultOpen={true}>
           <div className="mt-4 bg-[#F9FAFB] rounded-2xl border border-gray-100 overflow-hidden">
             <div onClick={props.onNavigateToPersonalData} className="p-4 flex items-center gap-4 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
@@ -158,6 +159,7 @@ export function ProfileView(props: ProfileViewProps) {
             </div>
           </div>
         </CollapsibleSection>
+        </div>{/* tutorial-profile-account */}
 
         {showAntraege && (
           <CollapsibleSection title="Anträge & HR" defaultOpen={false}>
@@ -165,6 +167,7 @@ export function ProfileView(props: ProfileViewProps) {
           </CollapsibleSection>
         )}
 
+        <div id="tutorial-profile-datasync">
         <CollapsibleSection title="Daten-Sync" defaultOpen={false}>
           <div className="grid grid-cols-2 gap-3 mt-4">
             <div onClick={() => setSyncType('drv')} className="border border-gray-200 rounded-2xl p-4 bg-[#F9FAFB] hover:bg-gray-100 transition-colors cursor-pointer group flex flex-col items-center text-center gap-3">
@@ -195,13 +198,16 @@ export function ProfileView(props: ProfileViewProps) {
             </p>
           </div>
         </CollapsibleSection>
+        </div>{/* tutorial-profile-datasync */}
 
+        <div id="tutorial-profile-simparams">
         <CollapsibleSection title="Simulations-Parameter" defaultOpen={false}>
           <p className="text-xs text-gray-500 mb-6 mt-4 leading-relaxed">
             Passe deine Annahmen für Inflation, Lebenserwartung und Rendite an. Diese globalen Einstellungen verändern die Prognose deines Dashboards.
           </p>
           <ScenarioSimulator {...props} />
         </CollapsibleSection>
+        </div>{/* tutorial-profile-simparams */}
       </div>
     </div>
   );

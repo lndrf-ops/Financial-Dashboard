@@ -1,0 +1,14 @@
+{
+  "name": "FutureMe",
+  "short_name": "FutureMe",
+  "description": "Dein persönlicher Rentenplaner",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/traderepublic_logo.jpg", "sizes": "192x192", "type": "image/jpeg" },
+    { "src": "/traderepublic_logo.jpg", "sizes": "512x512", "type": "image/jpeg" }
+  ]
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { usePensionMath } from "./hooks/usePensionMath";
 import { TrendingUp, Bell, LogOut, Building2, Briefcase, Home, Landmark, Bitcoin, X, CheckCircle2, ArrowRight, Users, LayoutDashboard, Sliders, User, HelpCircle, MessageCircle } from "lucide-react";
 
@@ -19,12 +19,12 @@ type DashboardView = 'dashboard' | 'invest' | 'simulate' | 'profile';
 const TUTORIAL_STEPS: { title: string; text: string; view: DashboardView }[] = [
   {
     title: "Deine Rente auf einen Blick.",
-    text: "Hier siehst du deine monatliche Kaufkraft im Alter. Deine gesetzliche und betriebliche Rente werden mit deinem ETF-Sparplan kombiniert.",
+    text: "Hier siehst du, wie viel du monatlich ausgeben kannst, wenn du in Rente gehst. Gesetzliche Rente, Betriebsrente und dein ETF-Sparplan werden kombiniert.",
     view: 'dashboard',
   },
   {
     title: "Dein Geld arbeitet für dich.",
-    text: "Passe deine monatliche Sparrate an und verfolge, wie der Zinseszins dein privates Vermögen über die Jahre skaliert.",
+    text: "Passe deine monatliche Sparrate an und verfolge, wie dein erspartes Geld mit der Zeit immer schneller wächst — Zinsen auf Zinsen machen den Unterschied.",
     view: 'invest',
   },
   {
@@ -135,100 +135,125 @@ function Confetti() {
 interface FeatureStep {
   title: string;
   text: string;
-  zone: 'header' | 'upper' | 'middle' | 'lower' | 'bottom';
+  targetId: string;
 }
 
 const FEATURE_STEPS: Record<string, FeatureStep[]> = {
   dashboard: [
-    { title: "Dein Rentenring", text: "Der Ring zeigt deinen Rentendeckungsgrad auf einen Blick. Jedes Segment steht für eine Rentenquelle — tippe drauf um Details zu sehen.", zone: 'upper' },
-    { title: "Deine 3 größten Hebel", text: "FutureMe berechnet automatisch die 3 effektivsten Maßnahmen zur Schließung deiner Lücke — sortiert nach Wirkung.", zone: 'middle' },
-    { title: "Deine Rentenbausteine", text: "Tippe auf einen Baustein um Werte direkt anzupassen — z.B. deine gesetzliche Rente oder den ETF-Depotwert.", zone: 'lower' },
+    { title: "Dein Rentenring", text: "Der Ring zeigt deinen Rentendeckungsgrad auf einen Blick. Jedes Segment steht für eine Rentenquelle — tippe drauf um Details zu sehen.", targetId: "tutorial-dashboard-ring" },
+    { title: "Dein Deckungsgrad", text: "Diese Zahl zeigt, wie viel Prozent deines Rentenziels du bereits abdeckst. 100% bedeutet: dein Wunscheinkommen im Alter ist vollständig gesichert.", targetId: "tutorial-dashboard-badge" },
+    { title: "Deine 3 größten Hebel", text: "FutureMe berechnet automatisch die 3 effektivsten Maßnahmen zur Schließung deiner Lücke — sortiert nach Wirkung.", targetId: "tutorial-dashboard-hebel" },
+    { title: "Deine Rentenbausteine", text: "Tippe auf einen Baustein um Werte direkt anzupassen — z.B. deine gesetzliche Rente oder den ETF-Depotwert.", targetId: "tutorial-dashboard-assets" },
   ],
   invest: [
-    { title: "Dein monatlicher Sparplan", text: "Der Betrag, der jeden Monat automatisch über dein Trade Republic Depot investiert wird — direkt aus dem Onboarding übernommen.", zone: 'upper' },
-    { title: "10-Jahres-Vorschau", text: "Der Chart zeigt die Vermögensentwicklung der nächsten 10 Jahre bei gleichbleibender Sparrate und 7% Rendite p.a.", zone: 'middle' },
-    { title: "Deine Ausführung", text: "Dein Kapital wird auf MSCI World ETF und optional Bitcoin aufgeteilt — mit einem Klick direkt in deinem TR-Depot ausführbar.", zone: 'lower' },
+    { title: "Dein monatlicher Sparplan", text: "Der Betrag, der jeden Monat automatisch über dein Trade Republic Depot investiert wird — direkt aus dem Onboarding übernommen.", targetId: "tutorial-invest-savings" },
+    { title: "10-Jahres-Vorschau", text: "Der Chart zeigt die Vermögensentwicklung der nächsten 10 Jahre bei gleichbleibender Sparrate und 7% Rendite pro Jahr.", targetId: "tutorial-invest-chart" },
+    { title: "Deine Ausführung", text: "Dein Kapital wird auf MSCI World ETF und optional Bitcoin aufgeteilt — mit einem Klick direkt in deinem TR-Depot ausführbar.", targetId: "tutorial-invest-execution" },
   ],
   simulate: [
-    { title: "Lebensereignisse", text: "Simuliere echte Momente: Elternzeit, Hauskauf, Jobwechsel oder Gehaltssprünge. Sieh sofort die Auswirkung auf dein Rentenkonto.", zone: 'upper' },
-    { title: "Stresstests", text: "Teste dein Portfolio gegen reale Extremszenarien: Börsencrash, hohe Inflation oder überdurchschnittliche Lebenserwartung.", zone: 'middle' },
-    { title: "Live-Auswirkung", text: "Alle Szenarien werden sofort auf deinen Rentenring angerechnet — wechsel zur Übersicht um das Ergebnis zu sehen.", zone: 'lower' },
+    { title: "Stresstests", text: "Teste dein Portfolio gegen reale Extremszenarien: Börsencrash, hohe Inflation oder überdurchschnittliche Lebenserwartung.", targetId: "tutorial-simulate-stresstests" },
+    { title: "Lebensereignisse", text: "Simuliere echte Momente: Elternzeit, Hauskauf, Jobwechsel oder Gehaltssprünge. Sieh sofort die Auswirkung auf dein Rentenkonto.", targetId: "tutorial-simulate-events" },
+    { title: "Live-Auswirkung", text: "Alle Szenarien werden sofort auf deinen Rentenring angerechnet — wechsel zur Übersicht um das Ergebnis zu sehen.", targetId: "tutorial-simulate-events" },
   ],
   profile: [
-    { title: "Deine Kernannahmen", text: "Passe Renteneintrittsalter, monatliche Sparrate und Renditeerwartung an. Alle Berechnungen aktualisieren sich in Echtzeit.", zone: 'upper' },
-    { title: "Rentenziel & Lebenserwartung", text: "Lege dein Wunscheinkommen im Alter fest und wie lange das Kapital reichen soll. FutureMe rechnet Inflation bereits ein.", zone: 'middle' },
-    { title: "DRV-Sync & Steuern", text: "Lade deinen Rentenbescheid hoch oder gleiche Werte mit der DRV ab. Hinterlege Steuerklasse für eine präzise Netto-Berechnung.", zone: 'lower' },
+    { title: "Dein Account", text: "Passe deine persönlichen Daten, Steuerklasse und Risikoprofil an — alles wird direkt aus deinem Trade Republic Konto übernommen.", targetId: "tutorial-profile-account" },
+    { title: "Daten-Sync", text: "Lade deinen Rentenbescheid hoch oder gleiche Werte mit der Deutschen Rentenversicherung ab — für eine präzise Netto-Berechnung.", targetId: "tutorial-profile-datasync" },
+    { title: "Simulations-Parameter", text: "Passe Renteneintrittsalter, monatliche Sparrate und Renditeerwartung an. Alle Berechnungen aktualisieren sich in Echtzeit.", targetId: "tutorial-profile-simparams" },
   ],
   chat: [
-    { title: "Finn – dein KI-Assistent", text: "Finn kennt all deine Rentendaten und kann Szenarien direkt für dich aktivieren. Kein Menü, kein Suchen — einfach fragen.", zone: 'header' },
-    { title: "Smarte Vorschläge", text: "Finn schlägt dir die wirkungsvollsten Aktionen vor. Tipp auf einen Chip und er antwortet sofort — und passt deine Simulation live an.", zone: 'lower' },
-    { title: "Eigene Fragen stellen", text: "Schreib Finn direkt: z.B. 'Was passiert bei Inflation?' oder 'Erhöhe meine Sparrate'. Er versteht natürliche Sprache.", zone: 'bottom' },
+    { title: "Finn – dein KI-Assistent", text: "Finn kennt all deine Rentendaten und kann Szenarien direkt für dich aktivieren. Kein Menü, kein Suchen — einfach fragen.", targetId: "tutorial-chat-header" },
+    { title: "Smarte Vorschläge", text: "Finn schlägt dir die wirkungsvollsten Aktionen vor. Tipp auf einen Chip und er antwortet sofort — und passt deine Simulation live an.", targetId: "tutorial-chat-chips" },
+    { title: "Eigene Fragen stellen", text: "Schreib Finn direkt: z.B. 'Was passiert bei Inflation?' oder 'Erhöhe meine Sparrate'. Er versteht natürliche Sprache.", targetId: "tutorial-chat-input" },
   ],
-};
-
-const ZONE_RECTS: Record<string, { top: number; height: number }> = {
-  header: { top: 56,  height: 64  },
-  upper:  { top: 130, height: 255 },
-  middle: { top: 405, height: 135 },
-  lower:  { top: 555, height: 155 },
-  bottom: { top: 725, height: 64  },
 };
 
 function FeatureTutorial({ tab, step, total, onNext, onComplete }: {
   tab: string; step: number; total: number; onNext: () => void; onComplete: () => void;
 }) {
   const feature = FEATURE_STEPS[tab]?.[step];
+  const [spotRect, setSpotRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!feature?.targetId) return;
+    const el = document.getElementById(feature.targetId);
+    if (!el) return;
+
+    const navH = 68;
+    const raw = el.getBoundingClientRect();
+    const absoluteTop = raw.top + window.scrollY;
+    const usableH = window.innerHeight - navH;
+    const targetScrollY = Math.max(0, absoluteTop - Math.round((usableH - raw.height) / 2));
+    window.scrollTo(0, targetScrollY);
+    document.body.style.overflow = 'hidden';
+
+    const r = el.getBoundingClientRect();
+    setSpotRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+
+    const handleResize = () => {
+      const rr = el.getBoundingClientRect();
+      setSpotRect({ top: rr.top, left: rr.left, width: rr.width, height: rr.height });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.body.style.overflow = '';
+    };
+  }, [feature?.targetId]);
+
   if (!feature) { onComplete(); return null; }
-  const rect = ZONE_RECTS[feature.zone];
-  const isLast = step === total - 1;
-  const calloutAtTop = feature.zone === 'lower' || feature.zone === 'bottom';
 
-  // Spotlight geometry
   const pad = 10;
-  const sx = pad;
-  const sy = rect.top - pad;
-  const sw = 430 - pad * 2;
-  const sh = rect.height + pad * 2;
-  const rx = 20;
+  const vh = window.innerHeight;
+  const navH = 68;
+  const isLast = step === total - 1;
 
-  // Rounded-rect SVG path helper
-  const rrPath = (x: number, y: number, w: number, h: number, r: number) =>
-    `M ${x+r} ${y} H ${x+w-r} A ${r} ${r} 0 0 1 ${x+w} ${y+r} V ${y+h-r} A ${r} ${r} 0 0 1 ${x+w-r} ${y+h} H ${x+r} A ${r} ${r} 0 0 1 ${x} ${y+h-r} V ${y+r} A ${r} ${r} 0 0 1 ${x+r} ${y} Z`;
+  // Adjust left coord for centered 430px container on wide screens
+  const containerOffset = Math.max(0, (window.innerWidth - 430) / 2);
+  const spotTop  = spotRect ? spotRect.top  - pad : -9999;
+  const spotLeft = spotRect ? spotRect.left - containerOffset - pad : 0;
+  const spotW    = spotRect ? spotRect.width  + pad * 2 : 0;
+  const spotH    = spotRect ? spotRect.height + pad * 2 : 0;
 
-  // Outer rect + spotlight hole → evenodd makes hole transparent
-  const overlayPath = `M 0 0 H 430 V 900 H 0 Z ${rrPath(sx, sy, sw, sh, rx)}`;
+  const cardH = 192;
+  const gap = 14;
+  const spaceBelow = vh - navH - (spotTop + spotH) - gap;
+  const cardTop = spotRect
+    ? spaceBelow >= cardH ? spotTop + spotH + gap : Math.max(8, spotTop - gap - cardH)
+    : vh / 2;
 
   return (
-    <div className="fixed inset-0 z-[90] pointer-events-none" style={{ maxWidth: 430, margin: '0 auto', left: 0, right: 0 }}>
-      {/* Gray overlay with spotlight cutout */}
-      <svg
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-        viewBox="0 0 430 900"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        {/* Semi-transparent gray overlay — evenodd creates hole where spotlight is */}
-        <path
-          fillRule="evenodd"
-          d={overlayPath}
-          fill="rgba(210,210,215,0.84)"
-        />
-        {/* Subtle white border ring around the spotlight */}
-        <rect
-          x={sx} y={sy} width={sw} height={sh} rx={rx} ry={rx}
-          fill="none"
-          stroke="rgba(255,255,255,0.7)"
-          strokeWidth="1.5"
-        />
-      </svg>
-
-      {/* Callout card */}
+    <div
+      className="fixed inset-0 z-[90]"
+      style={{ maxWidth: 430, margin: '0 auto', left: 0, right: 0, pointerEvents: 'none' }}
+    >
+      {/* Box-shadow spotlight — transparent div; the spread shadow creates the dim overlay with a cutout hole */}
       <div
-        className="pointer-events-auto absolute left-4 right-4 bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-300"
-        style={{ zIndex: 92, ...(calloutAtTop ? { top: 80 } : { bottom: 96 }) }}
+        style={{
+          position: 'absolute',
+          top: spotTop,
+          left: spotLeft,
+          width: spotW,
+          height: spotH,
+          borderRadius: 20,
+          boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.82)',
+          border: '1.5px solid rgba(255,255,255,0.35)',
+          transition: 'top 320ms cubic-bezier(0.4,0,0.2,1), left 320ms cubic-bezier(0.4,0,0.2,1), width 320ms cubic-bezier(0.4,0,0.2,1), height 320ms cubic-bezier(0.4,0,0.2,1)',
+          pointerEvents: 'none',
+          zIndex: 91,
+        }}
+      />
+
+      {/* Callout card — re-mounts on each step for the fade-in animation */}
+      <div
+        key={`${tab}-${step}`}
+        className="absolute left-4 right-4 bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+        style={{ top: cardTop, zIndex: 92, pointerEvents: 'auto' }}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
           <h3 className="text-[16px] font-black text-black leading-tight">{feature.title}</h3>
-          <button onClick={onComplete} className="text-gray-300 hover:text-black cursor-pointer shrink-0 mt-0.5"><X size={15} /></button>
+          <button onClick={onComplete} className="text-gray-300 hover:text-black cursor-pointer shrink-0 mt-0.5">
+            <X size={15} />
+          </button>
         </div>
         <p className="text-[13px] text-gray-500 leading-relaxed mb-5">{feature.text}</p>
         <div className="flex items-center gap-3">
@@ -272,8 +297,7 @@ export default function App() {
   // Per-tab feature tutorial
   const [featureTutorialTab, setFeatureTutorialTab] = useState<string | null>(null);
   const [featureTutorialStep, setFeatureTutorialStep] = useState(0);
-  const [seenTabTutorials, setSeenTabTutorials] = useState<Set<string>>(new Set(['dashboard', 'invest', 'simulate', 'profile', 'chat']));
-
+  const [seenTabTutorials, setSeenTabTutorials] = useState<Set<string>>(new Set());
   const handleTabNav = (id: string) => {
     setActiveView(id as any);
     if (!seenTabTutorials.has(id) && FEATURE_STEPS[id]) {
@@ -297,7 +321,7 @@ export default function App() {
   }, [activeView]);
 
   const [userName, setUserName] = useState("Lena");
-  const [currentAge, setCurrentAge] = useState(30);
+  const [currentAge, setCurrentAge] = useState(32);
   const [inflation, setInflation] = useState([2.5]);
   const [retirementAge, setRetirementAge] = useState([67]);
   const [lifeExpectancy, setLifeExpectancy] = useState([85]);
@@ -516,7 +540,7 @@ export default function App() {
   const rawSources = [
     { label: "Gesetzl. Rente", value: Math.round(statutoryValue * inflationFactor) },
     { label: "Portfolio",      value: Math.round(additionalMonthlyPayoutNominal * inflationFactor) },
-    { label: "bAV",            value: Math.round(companyValue * inflationFactor) },
+    { label: "Betriebl. Rente", value: Math.round(companyValue * inflationFactor) },
     { label: "Immobilie",      value: Math.round(realEstatePayout * inflationFactor) },
   ].filter(s => s.value > 0).map((s, i) => ({ ...s, color: segmentPalette[i] }));
 
@@ -568,7 +592,7 @@ export default function App() {
           <p className="text-white/35 text-[12px] font-semibold tracking-widest uppercase mb-7">by Trade Republic</p>
 
           <p className="text-[15px] text-white/70 leading-relaxed mb-8 px-2">
-            Deine Rentenlücke verstehen und schließen — so einfach wie eine Überweisung.
+            Deine Rente. Einfach verstehen, selbst gestalten — in 3 Minuten ein klares Bild.
           </p>
 
           {/* USPs */}
@@ -700,7 +724,7 @@ export default function App() {
             </p>
           </div>
 
-          <div className="flex items-center justify-center gap-2 py-2 px-4">
+          <div id="tutorial-dashboard-ring" className="flex items-center justify-center gap-2 py-2 px-4">
             {/* Left labels */}
             <div className="flex flex-col gap-4 w-[86px]">
               {segmentData.filter(s => s.side === 'left').map(s => {
@@ -807,7 +831,7 @@ export default function App() {
           </div>
 
           <div className="flex justify-center pb-6">
-            <div className={`px-4 py-1.5 rounded-full text-[13px] font-bold flex items-center gap-1.5 border ${ringBadgeBg}`}>
+            <div id="tutorial-dashboard-badge" className={`px-4 py-1.5 rounded-full text-[13px] font-bold flex items-center gap-1.5 border ${ringBadgeBg}`}>
               {isPositive ? <CheckCircle2 size={16} /> : <TrendingUp size={16} />}
               {isPositive && percentage > 100
                 ? `Ziel erreicht · ${percentage}%`
@@ -816,12 +840,12 @@ export default function App() {
           </div>
 
           {!isPositive && (
-            <div className="px-6 pt-2 pb-2">
+            <div id="tutorial-dashboard-hebel" className="px-6 pt-2 pb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Deine 3 größten Hebel</p>
               <div className="space-y-2">
                 {([
                   { icon: Landmark, title: "VL-Sparen aktivieren", subtitle: "Arbeitgeberzuschuss", gain: "+40 €/mtl." },
-                  { icon: Briefcase, title: "bAV nutzen", subtitle: "Entgeltumwandlung", gain: `+${leverBavNetto} €/mtl.` },
+                  { icon: Briefcase, title: "Betriebsrente nutzen", subtitle: "Dein Arbeitgeber zahlt mit", gain: `+${leverBavNetto} €/mtl.` },
                   { icon: TrendingUp, title: "Sparrate erhöhen", subtitle: "Privater Vermögensaufbau", gain: `+${leverSavings} €/mtl.` },
                 ] as { icon: React.ElementType; title: string; subtitle: string; gain: string }[]).map(({ icon: Icon, title, subtitle, gain }) => (
                   <div key={title} className="w-full bg-[#F9FAFB] border border-gray-100 rounded-xl px-3 py-2.5 flex items-center gap-3">
@@ -850,7 +874,9 @@ export default function App() {
             </div>
           </div>
 
-          <AssetBreakdown assets={displayAssets} onUpdateAsset={handleUpdateAsset} combinedMonthlyNominal={combinedMonthlyNominal} />
+          <div id="tutorial-dashboard-assets">
+            <AssetBreakdown assets={displayAssets} onUpdateAsset={handleUpdateAsset} combinedMonthlyNominal={combinedMonthlyNominal} />
+          </div>
 
           <div className="px-6 pt-6 pb-8">
             {isPositive ? (
@@ -934,7 +960,7 @@ export default function App() {
         />
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-white/90 backdrop-blur-xl border-t border-gray-100 pt-2.5 pb-5 flex justify-around items-center">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-white/90 backdrop-blur-xl border-t border-gray-100 pt-2.5 flex justify-around items-center" style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
         {([
           { id: "dashboard", label: "Übersicht", icon: LayoutDashboard, finn: false },
           { id: "invest",    label: "Invest",     icon: TrendingUp,      finn: false },

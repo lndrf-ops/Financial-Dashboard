@@ -49,12 +49,14 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
       </div>
 
       <div className="px-6 pt-10 pb-6">
-        <p className="text-[13px] text-gray-500 font-medium mb-1">Dein monatlicher Sparplan</p>
-        <h1 className="text-5xl font-black tracking-tight text-black mb-8">
-          € {monthlyContribution.toLocaleString("de-DE")}
-        </h1>
+        <div id="tutorial-invest-savings">
+          <p className="text-[13px] text-gray-500 font-medium mb-1">Dein monatlicher Sparplan</p>
+          <h1 className="text-5xl font-black tracking-tight text-black mb-8">
+            € {monthlyContribution.toLocaleString("de-DE")}
+          </h1>
+        </div>
 
-        <div className="h-48 w-full mb-8 relative flex flex-col justify-end border border-gray-200 rounded-2xl bg-[#F9FAFB] overflow-hidden">
+        <div id="tutorial-invest-chart" className="h-48 w-full mb-8 relative flex flex-col justify-end border border-gray-200 rounded-2xl bg-[#F9FAFB] overflow-hidden">
           <div className="absolute top-4 left-4 z-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">10-Jahres Vorschau</p>
             <p className="text-sm font-extrabold text-black">
@@ -96,7 +98,7 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
         </div>
 
         <div className="space-y-6">
-          <div>
+          <div id="tutorial-invest-execution">
             <h2 className="text-lg font-bold text-black mb-4">Deine Ausführung</h2>
 
             <div className="bg-[#F9FAFB] rounded-2xl p-4 flex items-center justify-between mb-3 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">

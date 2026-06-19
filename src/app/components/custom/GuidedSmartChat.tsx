@@ -194,7 +194,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     <div className="flex flex-col h-full pb-24 bg-white">
 
       {/* Header */}
-      <div className="shrink-0 sticky top-0 z-10 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center gap-3">
+      <div id="tutorial-chat-header" className="shrink-0 sticky top-0 z-10 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center gap-3">
         <button
           onClick={onReset}
           className="w-9 h-9 rounded-xl bg-black flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform"
@@ -246,7 +246,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       <div className="shrink-0 border-t border-gray-100 bg-white/90 backdrop-blur-xl px-4 pt-3 pb-4 space-y-2.5">
 
         {/* Chip stack */}
-        <div className="flex items-start gap-2">
+        <div id="tutorial-chat-chips" className="flex items-start gap-2">
           {/* Stack container — tall enough for 3 peeking chips */}
           <div className="flex-1 relative" style={{ height: '64px', overflow: 'visible' }}>
             {visibleStack.slice().reverse().map((actionIdx, revPos) => {
@@ -295,14 +295,14 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
         </div>
 
         {/* Text input */}
-        <div className="flex items-center gap-2 bg-[#F4F4F5] border border-gray-200 rounded-xl px-4 h-11 focus-within:border-black transition-colors">
+        <div id="tutorial-chat-input" className="flex items-center gap-2 bg-[#F4F4F5] border border-gray-200 rounded-xl px-4 h-11 focus-within:border-black transition-colors">
           <input
             ref={inputRef}
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             placeholder="Frage an Finn…"
-            className="flex-1 bg-transparent text-black text-[13px] placeholder:text-gray-400 focus:outline-none"
+            className="flex-1 bg-transparent text-black text-[16px] placeholder:text-gray-400 focus:outline-none"
           />
           <button
             onClick={handleSend}

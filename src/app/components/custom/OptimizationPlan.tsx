@@ -30,6 +30,7 @@ export function OptimizationPlan({
   const [step, setStep] = useState(1);
   const [vlCardState, setVlCardState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [bavCardState, setBavCardState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [hrEmail, setHrEmail] = useState('');
 
   const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(vlActive ? 'yes' : null);
   const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(bavNettoVerzicht[0] > 0 ? 'yes' : null);
@@ -311,9 +312,22 @@ export function OptimizationPlan({
         {step === 6 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
             <h1 className="text-2xl font-black text-black mb-2 leading-tight">Wir übernehmen die Bürokratie.</h1>
-            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            <p className="text-sm text-gray-500 mb-4 leading-relaxed">
               Wir haben die Anträge bereits für dich vorbereitet. Du entscheidest, ob wir sie direkt an deine Personalabteilung senden sollen.
             </p>
+
+            <div className="mb-5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                HR-E-Mail deines Arbeitgebers
+              </label>
+              <input
+                type="email"
+                value={hrEmail}
+                onChange={e => setHrEmail(e.target.value)}
+                placeholder="z.B. personal@meinunternehmen.de"
+                className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-[#F9FAFB] text-base text-black placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
+              />
+            </div>
 
             <div className="space-y-4 mb-6">
 
@@ -325,7 +339,7 @@ export function OptimizationPlan({
                     </div>
                     <div>
                       <p className="font-black text-[15px] text-emerald-700 leading-tight">Antrag gesendet!</p>
-                      <p className="text-[12px] text-emerald-600 mt-0.5">An: hr@deinunternehmen.de</p>
+                      <p className="text-[12px] text-emerald-600 mt-0.5">An: {hrEmail || 'deine Personalabteilung'}</p>
                     </div>
                   </div>
                 ) : (
@@ -336,7 +350,7 @@ export function OptimizationPlan({
                       </div>
                       <div>
                         <p className="font-black text-[15px] text-black leading-tight">Antrag auf VL-Sparen</p>
-                        <p className="text-[12px] text-gray-500 mt-0.5">hr@deinunternehmen.de · Kostenlos</p>
+                        <p className="text-[12px] text-gray-500 mt-0.5">{hrEmail || 'Deine Personalabteilung'} · Kostenlos</p>
                       </div>
                     </div>
                     <div className="space-y-2 mb-5">
@@ -374,7 +388,7 @@ export function OptimizationPlan({
                     </div>
                     <div>
                       <p className="font-black text-[15px] text-emerald-700 leading-tight">Antrag gesendet!</p>
-                      <p className="text-[12px] text-emerald-600 mt-0.5">An: hr@deinunternehmen.de</p>
+                      <p className="text-[12px] text-emerald-600 mt-0.5">An: {hrEmail || 'deine Personalabteilung'}</p>
                     </div>
                   </div>
                 ) : (
@@ -385,7 +399,7 @@ export function OptimizationPlan({
                       </div>
                       <div>
                         <p className="font-black text-[15px] text-black leading-tight">Antrag auf Entgeltumwandlung</p>
-                        <p className="text-[12px] text-gray-500 mt-0.5">hr@deinunternehmen.de · {bavNettoVerzicht[0]} € netto</p>
+                        <p className="text-[12px] text-gray-500 mt-0.5">{hrEmail || 'Deine Personalabteilung'} · {bavNettoVerzicht[0]} € netto</p>
                       </div>
                     </div>
                     <div className="space-y-2 mb-5">

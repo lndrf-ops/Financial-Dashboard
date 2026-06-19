@@ -112,14 +112,14 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
                   <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
                     {editingAsset.id === "realestate" ? "Monatliche Mietersparnis / Miete (€)" : "Erwartete monatl. Auszahlung (€ Brutto)"}
                   </label>
-                  <input type="number" value={inputPayout} onChange={(e) => setInputPayout(e.target.value)} className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-black focus:outline-none focus:border-black transition-colors" />
+                  <input type="number" value={inputPayout} onChange={(e) => setInputPayout(e.target.value)} className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-3 py-2.5 text-base text-black focus:outline-none focus:border-black transition-colors" />
                 </div>
               )}
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
                   {calculatedAssets.includes(editingAsset.id) ? "Aktuelles Startkapital (€)" : `Gesamtes angespartes Kapital (€)`}
                 </label>
-                <input type="number" value={inputAccumulated} onChange={(e) => setInputAccumulated(e.target.value)} className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-black focus:outline-none focus:border-black transition-colors" />
+                <input type="number" value={inputAccumulated} onChange={(e) => setInputAccumulated(e.target.value)} className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-3 py-2.5 text-base text-black focus:outline-none focus:border-black transition-colors" />
               </div>
             </div>
 
