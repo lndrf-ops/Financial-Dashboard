@@ -1,5 +1,12 @@
-import React, { useState, useLayoutEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  ChevronRight, Check,
+  Target, BadgePercent, Zap, Layers,
+  PiggyBank, TrendingUp, Shuffle,
+  Shield, Calendar,
+  User, RefreshCw, SlidersHorizontal,
+  Bot, Lightbulb, MessageSquare,
+} from 'lucide-react';
 import { FEATURE_STEPS } from './featureSteps';
 
 interface FeatureTutorialProps {
@@ -10,115 +17,181 @@ interface FeatureTutorialProps {
   onComplete: () => void;
 }
 
+const ICONS: Record<string, React.ReactNode[]> = {
+  dashboard: [
+    <Target size={18} className="text-white" />,
+    <BadgePercent size={18} className="text-white" />,
+    <Zap size={18} className="text-white" />,
+    <Layers size={18} className="text-white" />,
+  ],
+  invest: [
+    <PiggyBank size={18} className="text-white" />,
+    <TrendingUp size={18} className="text-white" />,
+    <Shuffle size={18} className="text-white" />,
+  ],
+  simulate: [
+    <Shield size={18} className="text-white" />,
+    <Calendar size={18} className="text-white" />,
+    <Zap size={18} className="text-white" />,
+  ],
+  profile: [
+    <User size={18} className="text-white" />,
+    <RefreshCw size={18} className="text-white" />,
+    <SlidersHorizontal size={18} className="text-white" />,
+  ],
+  chat: [
+    <Bot size={18} className="text-white" />,
+    <Lightbulb size={18} className="text-white" />,
+    <MessageSquare size={18} className="text-white" />,
+  ],
+};
+
 export function FeatureTutorial({ tab, step, total, onNext, onComplete }: FeatureTutorialProps) {
   const feature = FEATURE_STEPS[tab]?.[step];
-  const [spotRect, setSpotRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const [visible, setVisible] = useState(false);
 
-  useLayoutEffect(() => {
-    if (!feature?.targetId) return;
-    const el = document.getElementById(feature.targetId);
-    if (!el) return;
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 30);
+    return () => clearTimeout(t);
+  }, [step, tab]);
 
-    const navH = 68;
-    const raw = el.getBoundingClientRect();
-    const absoluteTop = raw.top + window.scrollY;
-    const usableH = window.innerHeight - navH;
-    const targetScrollY = Math.max(0, absoluteTop - Math.round((usableH - raw.height) / 2));
-    window.scrollTo(0, targetScrollY);
+  const handleNext = () => {
+    setVisible(false);
+    setTimeout(() => {
+      setVisible(false);
+      onNext();
+    }, 180);
+  };
 
-    // Measure BEFORE locking overflow — on iOS, overflow:hidden on body resets scrollY to 0
-    const r = el.getBoundingClientRect();
-    setSpotRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-    document.body.style.overflow = 'hidden';
-
-    const savedPosition   = el.style.position;
-    const savedZIndex     = el.style.zIndex;
-    const savedBackground = el.style.background;
-    el.style.position   = 'relative';
-    el.style.zIndex     = '93';
-    el.style.background = 'white';
-
-    const handleResize = () => {
-      const rr = el.getBoundingClientRect();
-      setSpotRect({ top: rr.top, left: rr.left, width: rr.width, height: rr.height });
-    };
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      document.body.style.overflow = '';
-      el.style.position   = savedPosition;
-      el.style.zIndex     = savedZIndex;
-      el.style.background = savedBackground;
-    };
-  }, [feature?.targetId]);
+  const handleComplete = () => {
+    setVisible(false);
+    setTimeout(onComplete, 200);
+  };
 
   if (!feature) { onComplete(); return null; }
 
-  const vh = window.innerHeight;
-  const navH = 68;
   const isLast = step === total - 1;
-  const pad = 10;
-  const spotTop = spotRect ? spotRect.top  - pad : -9999;
-  const spotH   = spotRect ? spotRect.height + pad * 2 : 0;
-  const cardH = 230;
-  const gap = 24;
-  const spaceBelow = spotRect ? vh - navH - (spotTop + spotH) - gap : 0;
-  // bottom anchor when card goes above: prevents overlap regardless of actual card height
-  const cardPositionStyle: React.CSSProperties = !spotRect
-    ? { top: vh / 2 }
-    : spaceBelow >= cardH
-      ? { top: spotTop + spotH + gap }
-      : { bottom: vh - (spotTop - gap) };
+  const icon = ICONS[tab]?.[step] ?? <Zap size={18} className="text-white" />;
 
   return (
     <>
+      <style>{`
+        @keyframes ft-backdrop-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes ft-sheet-in {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes ft-content-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* Backdrop — tap to dismiss */}
       <div
         className="fixed inset-0 z-[90]"
-        style={{ maxWidth: 430, margin: '0 auto', left: 0, right: 0, background: 'rgba(15,23,42,0.82)', pointerEvents: 'none' }}
+        style={{
+          background: 'rgba(8,8,20,0.55)',
+          backdropFilter: 'blur(1px)',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 220ms ease',
+        }}
+        onClick={handleComplete}
       />
-      {spotRect && (
-        <div
-          className="fixed z-[95]"
-          style={{
-            top: spotRect.top - pad,
-            left: spotRect.left - pad,
-            width: spotRect.width + pad * 2,
-            height: spotRect.height + pad * 2,
-            borderRadius: 20,
-            border: '1.5px solid rgba(255,255,255,0.4)',
-            transition: 'top 320ms cubic-bezier(0.4,0,0.2,1), left 320ms, width 320ms, height 320ms',
-            pointerEvents: 'none',
-          }}
-        />
-      )}
+
+      {/* Sheet */}
       <div
-        className="fixed inset-0 z-[96]"
-        style={{ maxWidth: 430, margin: '0 auto', left: 0, right: 0, pointerEvents: 'none' }}
+        className="fixed bottom-0 left-0 right-0 z-[91]"
+        style={{ maxWidth: 430, margin: '0 auto' }}
       >
         <div
-          key={`${tab}-${step}`}
-          className="absolute left-4 right-4 bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-300"
-          style={{ ...cardPositionStyle, pointerEvents: 'auto' }}
+          className="bg-white rounded-t-[32px] shadow-[0_-8px_48px_rgba(0,0,0,0.18)]"
+          style={{
+            transform: visible ? 'translateY(0)' : 'translateY(100%)',
+            transition: 'transform 320ms cubic-bezier(0.32,0.72,0,1)',
+            paddingBottom: 'max(2.25rem, env(safe-area-inset-bottom, 2.25rem))',
+          }}
         >
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-[16px] font-black text-black leading-tight">{feature.title}</h3>
-            <button onClick={onComplete} className="text-gray-300 hover:text-black cursor-pointer shrink-0 mt-0.5">
-              <X size={15} />
-            </button>
+          {/* Drag handle */}
+          <div className="pt-4 px-6 pb-0">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto" />
           </div>
-          <p className="text-[13px] text-gray-500 leading-relaxed mb-5">{feature.text}</p>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1 flex-1">
-              {Array.from({ length: total }).map((_, i) => (
-                <div key={i} className={`h-1 rounded-full flex-1 transition-all duration-300 ${i === step ? 'bg-black' : i < step ? 'bg-gray-400' : 'bg-gray-100'}`} />
-              ))}
+
+          {/* Content — re-animates on each step */}
+          <div
+            key={`${tab}-${step}`}
+            className="px-6 pt-5"
+            style={{ animation: 'ft-content-in 0.28s ease forwards' }}
+          >
+            {/* Progress bar */}
+            <div className="h-[3px] bg-gray-100 rounded-full mb-6 overflow-hidden">
+              <div
+                className="h-full bg-black rounded-full"
+                style={{
+                  width: `${((step + 1) / total) * 100}%`,
+                  transition: 'width 500ms cubic-bezier(0.4,0,0.2,1)',
+                }}
+              />
             </div>
-            <button
-              onClick={isLast ? onComplete : onNext}
-              className="bg-black text-white text-[13px] font-extrabold px-5 py-2.5 rounded-xl cursor-pointer"
-            >
-              {isLast ? 'Fertig' : 'Weiter →'}
-            </button>
+
+            {/* Step label + skip */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                Schritt {step + 1} von {total}
+              </span>
+              <button
+                onClick={handleComplete}
+                className="text-[13px] font-medium text-gray-400 active:text-black transition-colors cursor-pointer"
+              >
+                Überspringen
+              </button>
+            </div>
+
+            {/* Icon + Title */}
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0">
+                {icon}
+              </div>
+              <h3 className="text-[20px] font-black text-black leading-tight">
+                {feature.title}
+              </h3>
+            </div>
+
+            {/* Description */}
+            <p className="text-[14px] text-gray-500 leading-relaxed mb-7">
+              {feature.text}
+            </p>
+
+            {/* Dots + CTA */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-1.5 items-center">
+                {Array.from({ length: total }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-full"
+                    style={{
+                      width: i === step ? 22 : 6,
+                      height: 6,
+                      background: i < step ? '#9ca3af' : i === step ? '#000' : '#e5e7eb',
+                      transition: 'width 300ms cubic-bezier(0.4,0,0.2,1), background 300ms ease',
+                    }}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={isLast ? handleComplete : handleNext}
+                className="flex items-center gap-1.5 bg-black text-white text-[14px] font-bold px-6 py-3 rounded-2xl cursor-pointer active:scale-95 transition-transform select-none"
+              >
+                {isLast
+                  ? <><Check size={14} strokeWidth={3} />Fertig</>
+                  : <>Weiter<ChevronRight size={14} strokeWidth={2.5} /></>
+                }
+              </button>
+            </div>
           </div>
         </div>
       </div>

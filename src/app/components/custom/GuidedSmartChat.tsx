@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, RefreshCw, Bot, MessageCircle } from "lucide-react";
+import { Send, RefreshCw, Bot, MessageCircle, Undo2 } from "lucide-react";
 import { LifeEvent, StressTests } from "./SimulateView";
 
 interface ChatAction {
@@ -26,6 +26,13 @@ interface Message {
   text: string;
 }
 
+interface StateSnapshot {
+  monthlyContribution: number;
+  retirementAge: number;
+  lifeEvents: LifeEvent[];
+  stressTests: StressTests;
+}
+
 const STACK_DEPTH = 3;
 
 export function GuidedSmartChat(props: GuidedSmartChatProps) {
@@ -44,6 +51,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [chipStack, setChipStack] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7]);
   const [isExiting, setIsExiting] = useState(false);
+  const [history, setHistory] = useState<StateSnapshot[]>([]);
   const nextId = useRef(1);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -147,8 +155,23 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     setTimeout(() => {
       setIsTyping(false);
       setMessages(prev => [...prev, { id: bid, from: 'bot', text: botText }]);
-      if (execute) execute();
+      if (execute) {
+        setHistory(prev => [...prev, { monthlyContribution, retirementAge, lifeEvents, stressTests }]);
+        execute();
+      }
     }, 520);
+  };
+
+  const handleUndo = () => {
+    if (history.length === 0 || isTyping) return;
+    const snapshot = history[history.length - 1];
+    setHistory(prev => prev.slice(0, -1));
+    setMonthlyContribution(snapshot.monthlyContribution);
+    setRetirementAge(snapshot.retirementAge);
+    setLifeEvents(snapshot.lifeEvents);
+    setStressTests(snapshot.stressTests);
+    const bid = nextId.current++;
+    setMessages(prev => [...prev, { id: bid, from: 'bot', text: 'Letzte Änderung rückgängig gemacht. Deine Simulation ist wieder auf dem vorherigen Stand.' }]);
   };
 
   const handleSend = () => {
@@ -282,6 +305,16 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
               );
             })}
           </div>
+
+          {/* Undo button */}
+          <button
+            onClick={handleUndo}
+            disabled={history.length === 0 || isTyping}
+            className="shrink-0 w-10 h-10 rounded-xl bg-[#F4F4F5] hover:bg-black hover:text-white flex items-center justify-center text-gray-400 transition-all disabled:opacity-40 cursor-pointer"
+            title="Rückgängig"
+          >
+            <Undo2 size={13} />
+          </button>
 
           {/* Refresh button */}
           <button
