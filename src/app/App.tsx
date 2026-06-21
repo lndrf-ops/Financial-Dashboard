@@ -44,20 +44,24 @@ export default function App() {
     leverBavNetto,
     combinedMonthlyNominal,
     totalNetWorthAtRetirement,
+    avdPayoutNominal,
   } = usePensionMath({
-    currentAge:          s.currentAge,
-    retirementAge:       s.retirementAge[0],
-    lifeExpectancy:      s.lifeExpectancy[0],
-    monthlyContribution: s.monthlyContribution[0],
-    dynamicSavings:      s.dynamicSavings,
-    expectedReturn:      s.expectedReturn[0],
-    inflation:           s.inflation[0],
-    targetPension:       s.targetPensionReal[0],
-    dynamicAssets:       s.dynamicAssets,
-    vlActive:            s.vlActive,
-    bavBruttoInvest:     s.bavBruttoInvest,
-    lifeEvents:          s.lifeEvents,
-    stressTests:         s.stressTests,
+    currentAge:             s.currentAge,
+    retirementAge:          s.retirementAge[0],
+    lifeExpectancy:         s.lifeExpectancy[0],
+    monthlyContribution:    s.monthlyContribution[0],
+    dynamicSavings:         s.dynamicSavings,
+    expectedReturn:         s.expectedReturn[0],
+    inflation:              s.inflation[0],
+    targetPension:          s.targetPensionReal[0],
+    dynamicAssets:          s.dynamicAssets,
+    vlActive:               s.vlActive,
+    bavBruttoInvest:        s.bavBruttoInvest,
+    lifeEvents:             s.lifeEvents,
+    stressTests:            s.stressTests,
+    avdActive:              s.avdActive,
+    avdMonthlyContribution: s.avdMonthlyContribution[0],
+    avdAccumulated:         0,
   });
 
   const activeLifeExpectancy = s.stressTests.longevity ? 98 : s.lifeExpectancy[0];
@@ -157,6 +161,7 @@ export default function App() {
           inflationFactor={inflationFactor}
           combinedMonthlyNominal={combinedMonthlyNominal}
           dynamicAssets={s.dynamicAssets}
+          avdPayoutNominal={avdPayoutNominal}
           isPositive={isPositive}
           leverBavNetto={leverBavNetto}
           leverSavings={leverSavings}
@@ -183,6 +188,10 @@ export default function App() {
             setLifeEvents={s.setLifeEvents}
             stressTests={s.stressTests}
             setStressTests={s.setStressTests}
+            avdActive={s.avdActive}
+            setAvdActive={s.setAvdActive}
+            avdMonthlyContribution={s.avdMonthlyContribution[0]}
+            setAvdMonthlyContribution={val => s.setAvdMonthlyContribution([val])}
           />
         </div>
       )}
@@ -230,6 +239,8 @@ export default function App() {
           setLifeEvents={s.setLifeEvents}
           stressTests={s.stressTests}
           setStressTests={s.setStressTests}
+          avdActive={s.avdActive}
+          setAvdActive={s.setAvdActive}
           onReset={() => s.setChatResetKey(k => k + 1)}
         />
       </div>

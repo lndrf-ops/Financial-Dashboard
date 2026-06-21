@@ -12,6 +12,9 @@ import { monthlyAnnuityPayment, requiredMonthlyPMT } from '../utils/financeMath'
 // Conservative payout-phase return (annuity / capital-drawdown rate)
 const SAFE_RATE = 0.035;
 
+// Annual state subsidy for the new Altersvorsorgedepot (ab 2027)
+const AVD_GRUNDZULAGE_YEARLY = 200;
+
 // ─── Public Interfaces ────────────────────────────────────────────────────────
 
 export interface PensionMathInput {
@@ -28,6 +31,9 @@ export interface PensionMathInput {
   bavBruttoInvest: number;  // brutto monthly bAV investment
   lifeEvents: LifeEvent[];
   stressTests: StressTests;
+  avdActive: boolean;
+  avdMonthlyContribution: number;
+  avdAccumulated: number;
 }
 
 export interface PensionMathResult {
@@ -58,6 +64,8 @@ export interface PensionMathResult {
   yearsToRetire: number;
   /** Years in retirement phase */
   yearsInRetirement: number;
+  /** Monthly payout from Altersvorsorgedepot at retirement (real €) */
+  avdPayoutNominal: number;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -76,6 +84,9 @@ export function usePensionMath({
   bavBruttoInvest,
   lifeEvents,
   stressTests,
+  avdActive,
+  avdMonthlyContribution,
+  avdAccumulated,
 }: PensionMathInput): PensionMathResult {
 
   // ── Derived configuration ──────────────────────────────────────────────────
@@ -95,16 +106,19 @@ export function usePensionMath({
 
   // ── Year-by-year wealth simulation ────────────────────────────────────────
   // Returns the two values that everything else derives from.
-  const { capitalAtRetirement, additionalMonthlyPayoutNominal } = useMemo(() => {
+  const { capitalAtRetirement, additionalMonthlyPayoutNominal, avdCapitalAtRetirement } = useMemo(() => {
     let capInvested = etfStart + cryptoStart;
     let capCash     = cashStart;
+    let capAvd      = avdAccumulated;
     let loopSavings = monthlyContribution;
     const agExtra   = (vlActive ? 40 : 0) + bavBruttoInvest;
+    const avdMonthly = avdActive ? avdMonthlyContribution + AVD_GRUNDZULAGE_YEARLY / 12 : 0;
 
     // Set once when the retirement phase begins; locked for the entire drawdown
-    let retirementCapital = 0;
-    let annuityLocked     = 0;
-    let retirementEntered = false;
+    let retirementCapital    = 0;
+    let avdRetirementCapital = 0;
+    let annuityLocked        = 0;
+    let retirementEntered    = false;
 
     for (let age = currentAge; age <= activeLifeExp; age++) {
       const event         = lifeEvents.find(e => e.age === age);
@@ -130,6 +144,7 @@ export function usePensionMath({
         // ── Accumulation phase ──────────────────────────────────────────────
         for (let m = 0; m < 12; m++) {
           capInvested = capInvested * (1 + returnMonthly) + activeSavings;
+          if (avdActive) capAvd = capAvd * (1 + returnMonthly) + avdMonthly;
         }
         if (dynamicSavings && (!event || event.type !== 'sabbatical')) {
           loopSavings *= 1.02; // 2 % annual contribution increase
@@ -142,10 +157,14 @@ export function usePensionMath({
           capInvested += capCash;
           capCash      = 0;
           // Apply bear-market crash (−20 % one-time shock at retirement)
-          if (stressTests.bearMarket) capInvested *= 0.8;
+          if (stressTests.bearMarket) {
+            capInvested *= 0.8;
+            capAvd      *= 0.8;
+          }
           // Lock in payout level based on actual starting capital
-          retirementCapital = capInvested;
-          annuityLocked     = monthlyAnnuityPayment(capInvested, SAFE_RATE, yearsInRetirement);
+          retirementCapital    = capInvested;
+          avdRetirementCapital = capAvd;
+          annuityLocked        = monthlyAnnuityPayment(capInvested, SAFE_RATE, yearsInRetirement);
         }
         for (let m = 0; m < 12; m++) {
           capInvested = Math.max(0, capInvested * (1 + safeReturnMonthly) - annuityLocked);
@@ -153,21 +172,30 @@ export function usePensionMath({
       }
     }
 
-    return { capitalAtRetirement: retirementCapital, additionalMonthlyPayoutNominal: annuityLocked };
+    return {
+      capitalAtRetirement: retirementCapital,
+      additionalMonthlyPayoutNominal: annuityLocked,
+      avdCapitalAtRetirement: avdRetirementCapital,
+    };
   }, [
     currentAge, retirementAge, activeLifeExp, monthlyContribution,
     dynamicSavings, returnMonthly, etfStart, cryptoStart, cashStart,
     lifeEvents, stressTests.bearMarket, vlActive, bavBruttoInvest,
-    yearsInRetirement,
+    yearsInRetirement, avdActive, avdMonthlyContribution, avdAccumulated,
   ]);
 
+  // ── AVD payout (separate annuity from Altersvorsorgedepot) ───────────────
+  const avdPayoutNominal = avdActive && avdCapitalAtRetirement > 0
+    ? monthlyAnnuityPayment(avdCapitalAtRetirement, SAFE_RATE, yearsInRetirement)
+    : 0;
+
   // ── Aggregation ───────────────────────────────────────────────────────────
-  // Sum all fixed income sources; ETF portfolio payout is handled separately above
+  // Sum all fixed income sources; ETF and AVD payouts are calculated dynamically
   const fixedPayoutsNominal = dynamicAssets
-    .filter(a => a.id !== 'etf')
+    .filter(a => a.id !== 'etf' && a.id !== 'avd')
     .reduce((s, a) => s + (a.payout ?? 0), 0);
 
-  const totalNominalMonthly = fixedPayoutsNominal + additionalMonthlyPayoutNominal;
+  const totalNominalMonthly = fixedPayoutsNominal + additionalMonthlyPayoutNominal + avdPayoutNominal;
 
   // ── Inflation adjustment ─────────────────────────────────────────────────
   // Fisher discounting: PV = FV / (1+i)^y (textbook-correct formula)
@@ -214,8 +242,9 @@ export function usePensionMath({
     leverSavings,
     leverBavNetto,
     combinedMonthlyNominal: totalNominalMonthly,
-    totalNetWorthAtRetirement: capitalAtRetirement + realEstateAcc,
+    totalNetWorthAtRetirement: capitalAtRetirement + avdCapitalAtRetirement + realEstateAcc,
     yearsToRetire,
     yearsInRetirement,
+    avdPayoutNominal,
   };
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, TrendingUp, Briefcase, Home, Landmark, Bitcoin } from 'lucide-react';
+import { Building2, TrendingUp, Briefcase, Home, Landmark, Bitcoin, Wallet } from 'lucide-react';
 import { Asset } from '../components/custom/AssetBreakdown';
 import { AIOnboardingData } from '../components/custom/AIOnboarding';
 import { Persona } from '../components/custom/Onboarding';
@@ -10,12 +10,13 @@ export type AppView =
   | 'optimize' | 'invest' | 'simulate' | 'profile' | 'personalData' | 'chat';
 
 const DEFAULT_ASSETS: Asset[] = [
-  { id: "statutory",  name: "Gesetzliche Rente",    subtitle: "Via PDF-Scan (Netto)",       icon: Building2, payout: 0, accumulatedLabel: "Beiträge",          accumulatedValue: 0 },
-  { id: "etf",        name: "Weltweites Portfolio",  subtitle: "Privater Vermögensaufbau",   icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert",   accumulatedValue: 0 },
-  { id: "company",    name: "Betriebliche Rente",    subtitle: "Entgeltumwandlung",          icon: Briefcase, payout: 0, accumulatedLabel: "Angespartes Kapital",accumulatedValue: 0 },
-  { id: "realestate", name: "Immobilie",             subtitle: "Eigenheim / Vermietung",     icon: Home,      payout: 0, accumulatedLabel: "Immobilienwert",     accumulatedValue: 0 },
-  { id: "cash",       name: "Tagesgeld",             subtitle: "Sichere Liquidität",         icon: Landmark,  payout: 0, accumulatedLabel: "Start-Guthaben",     accumulatedValue: 0 },
-  { id: "crypto",     name: "Kryptowährungen",       subtitle: "Bitcoin & Altcoins",         icon: Bitcoin,   payout: 0, accumulatedLabel: "Portfolio",          accumulatedValue: 0 },
+  { id: "statutory",  name: "Gesetzliche Rente",       subtitle: "Via PDF-Scan (Netto)",          icon: Building2, payout: 0, accumulatedLabel: "Beiträge",          accumulatedValue: 0 },
+  { id: "etf",        name: "Weltweites Portfolio",     subtitle: "Privater Vermögensaufbau",      icon: TrendingUp, payout: 0, accumulatedLabel: "Start-Depotwert",  accumulatedValue: 0 },
+  { id: "company",    name: "Betriebliche Rente",       subtitle: "Entgeltumwandlung",             icon: Briefcase, payout: 0, accumulatedLabel: "Angespartes Kapital",accumulatedValue: 0 },
+  { id: "realestate", name: "Immobilie",                subtitle: "Eigenheim / Vermietung",        icon: Home,      payout: 0, accumulatedLabel: "Immobilienwert",     accumulatedValue: 0 },
+  { id: "cash",       name: "Tagesgeld",                subtitle: "Sichere Liquidität",            icon: Landmark,  payout: 0, accumulatedLabel: "Start-Guthaben",     accumulatedValue: 0 },
+  { id: "crypto",     name: "Kryptowährungen",          subtitle: "Bitcoin & Altcoins",            icon: Bitcoin,   payout: 0, accumulatedLabel: "Portfolio",          accumulatedValue: 0 },
+  { id: "avd",        name: "Altersvorsorgedepot",      subtitle: "Staatl. gefördert (ab 2027)",   icon: Wallet,    payout: 0, accumulatedLabel: "Depotwert",          accumulatedValue: 0 },
 ];
 
 export function useAppState() {
@@ -42,6 +43,8 @@ export function useAppState() {
   const [lifeEvents, setLifeEvents] = useState<LifeEvent[]>([]);
   const [stressTests, setStressTests] = useState<StressTests>({ bearMarket: false, highInflation: false, longevity: false });
   const [dynamicAssets, setDynamicAssets] = useState<Asset[]>(DEFAULT_ASSETS);
+  const [avdActive, setAvdActive] = useState(false);
+  const [avdMonthlyContribution, setAvdMonthlyContribution] = useState([50]);
 
   const bavBruttoInvest = Math.round(bavNettoVerzicht[0] * 2.1);
 
@@ -88,6 +91,7 @@ export function useAppState() {
       { id: "realestate", name: "Immobilie",           subtitle: "Eigenheim / Vermietung",   icon: Home,       payout: 0,         accumulatedLabel: "Verkehrswert",   accumulatedValue: 0 },
       { id: "cash",       name: "Tagesgeld",           subtitle: "Sichere Liquidität",        icon: Landmark,   payout: 0,         accumulatedLabel: "Start-Guthaben", accumulatedValue: cashStart },
       { id: "crypto",     name: "Kryptowährungen",     subtitle: "Bitcoin & Altcoins",        icon: Bitcoin,    payout: 0,         accumulatedLabel: "Wallet",         accumulatedValue: 0 },
+      { id: "avd",        name: "Altersvorsorgedepot", subtitle: "Staatl. gefördert (ab 2027)", icon: Wallet,  payout: 0,         accumulatedLabel: "Depotwert",      accumulatedValue: 0 },
     ]);
     triggerNotification(toastMsg);
     setActiveView('dashboard');
@@ -102,12 +106,13 @@ export function useAppState() {
     setLifeEvents([]);
     setStressTests({ bearMarket: false, highInflation: false, longevity: false });
     setDynamicAssets([
-      { id: "statutory",  name: "Gesetzliche Rente",    subtitle: "Deutsche Rentenversicherung", icon: Building2,  payout: p.assets.statutoryPayout, accumulatedLabel: "Beiträge",      accumulatedValue: p.assets.statutoryAcc },
-      { id: "etf",        name: "Weltweites Portfolio",  subtitle: "Privater Vermögensaufbau",   icon: TrendingUp, payout: 0,                         accumulatedLabel: "Start-Depotwert",accumulatedValue: p.assets.etfAcc },
-      { id: "company",    name: "Betriebliche Rente",    subtitle: "Entgeltumwandlung",          icon: Briefcase,  payout: p.assets.companyPayout,    accumulatedLabel: "Kapital",       accumulatedValue: p.assets.companyAcc },
-      { id: "realestate", name: "Immobilie",             subtitle: "Eigenheim / Vermietung",     icon: Home,       payout: p.assets.realestatePayout, accumulatedLabel: "Verkehrswert",  accumulatedValue: p.assets.realestateAcc },
-      { id: "cash",       name: "Tagesgeld",             subtitle: "Sichere Liquidität",         icon: Landmark,   payout: 0,                         accumulatedLabel: "Start-Guthaben",accumulatedValue: p.assets.cashAcc },
-      { id: "crypto",     name: "Kryptowährungen",       subtitle: "Bitcoin & Altcoins",         icon: Bitcoin,    payout: 0,                         accumulatedLabel: "Wallet",        accumulatedValue: p.assets.cryptoAcc },
+      { id: "statutory",  name: "Gesetzliche Rente",    subtitle: "Deutsche Rentenversicherung",   icon: Building2,  payout: p.assets.statutoryPayout, accumulatedLabel: "Beiträge",      accumulatedValue: p.assets.statutoryAcc },
+      { id: "etf",        name: "Weltweites Portfolio",  subtitle: "Privater Vermögensaufbau",     icon: TrendingUp, payout: 0,                         accumulatedLabel: "Start-Depotwert",accumulatedValue: p.assets.etfAcc },
+      { id: "company",    name: "Betriebliche Rente",    subtitle: "Entgeltumwandlung",            icon: Briefcase,  payout: p.assets.companyPayout,    accumulatedLabel: "Kapital",       accumulatedValue: p.assets.companyAcc },
+      { id: "realestate", name: "Immobilie",             subtitle: "Eigenheim / Vermietung",       icon: Home,       payout: p.assets.realestatePayout, accumulatedLabel: "Verkehrswert",  accumulatedValue: p.assets.realestateAcc },
+      { id: "cash",       name: "Tagesgeld",             subtitle: "Sichere Liquidität",           icon: Landmark,   payout: 0,                         accumulatedLabel: "Start-Guthaben",accumulatedValue: p.assets.cashAcc },
+      { id: "crypto",     name: "Kryptowährungen",       subtitle: "Bitcoin & Altcoins",           icon: Bitcoin,    payout: 0,                         accumulatedLabel: "Wallet",        accumulatedValue: p.assets.cryptoAcc },
+      { id: "avd",        name: "Altersvorsorgedepot",   subtitle: "Staatl. gefördert (ab 2027)", icon: Wallet,     payout: 0,                         accumulatedLabel: "Depotwert",     accumulatedValue: 0 },
     ]);
     setActiveView('dashboard');
   };
@@ -149,6 +154,8 @@ export function useAppState() {
     lifeEvents, setLifeEvents,
     stressTests, setStressTests,
     dynamicAssets,
+    avdActive, setAvdActive,
+    avdMonthlyContribution, setAvdMonthlyContribution,
     triggerNotification,
     handleAIOnboardingComplete,
     handleLoadPersona,

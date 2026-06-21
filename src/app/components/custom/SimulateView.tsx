@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { AlertTriangle, TrendingDown, Plane, Home as HomeIcon, Baby, Plus, X, Activity } from "lucide-react";
+import { AlertTriangle, TrendingDown, Plane, Home as HomeIcon, Baby, Plus, X, Activity, Wallet, Lock } from "lucide-react";
+
+const AVD_AVAILABLE = new Date() >= new Date('2027-01-01');
 import { Switch } from "../ui/switch";
 
 export interface LifeEvent {
@@ -11,9 +13,11 @@ export interface StressTests { bearMarket: boolean; highInflation: boolean; long
 interface SimulateViewProps {
   currentAge: number; retirementAge: number; lifeEvents: LifeEvent[];
   setLifeEvents: (events: LifeEvent[]) => void; stressTests: StressTests; setStressTests: (tests: StressTests) => void;
+  avdActive: boolean; setAvdActive: (v: boolean) => void;
+  avdMonthlyContribution: number; setAvdMonthlyContribution: (v: number) => void;
 }
 
-export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEvents, stressTests, setStressTests }: SimulateViewProps) {
+export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEvents, stressTests, setStressTests, avdActive, setAvdActive, avdMonthlyContribution, setAvdMonthlyContribution }: SimulateViewProps) {
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   const availableEvents = [
@@ -86,6 +90,73 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
             </div>
             <Switch checked={stressTests.longevity} onCheckedChange={(c) => setStressTests({ ...stressTests, longevity: c })} className="data-[state=checked]:bg-black" />
           </div>
+        </div>
+
+        {/* ── Altersvorsorgedepot 2027 ─────────────────────────────────── */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className={`text-[13px] font-semibold uppercase tracking-widest ${AVD_AVAILABLE ? 'text-black' : 'text-gray-400'}`}>Altersvorsorgedepot 2027</h2>
+            {AVD_AVAILABLE
+              ? <span className="text-[9px] font-bold uppercase tracking-widest text-white bg-black px-2 py-0.5 rounded-full">Neu</span>
+              : <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full flex items-center gap-1"><Lock size={8} />Ab Jan. 2027</span>
+            }
+          </div>
+          <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+            {AVD_AVAILABLE
+              ? 'Das staatlich geförderte Altersvorsorgedepot ersetzt die Riester-Rente. Der Staat zahlt bis zu 200 € Grundzulage pro Jahr direkt in dein Depot.'
+              : 'Ab Januar 2027 ersetzt das staatlich geförderte Altersvorsorgedepot die Riester-Rente. Der Staat wird bis zu 200 € Grundzulage pro Jahr direkt in dein Depot einzahlen — hier siehst du schon mal, wie es sich auf deine Rente auswirken würde.'}
+          </p>
+
+          <div className={`rounded-2xl p-4 border flex items-center justify-between mb-3 ${AVD_AVAILABLE ? 'bg-[#F9FAFB] border-gray-200' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${AVD_AVAILABLE ? 'bg-black' : 'bg-gray-300'}`}>
+                {AVD_AVAILABLE ? <Wallet size={18} className="text-white" /> : <Lock size={18} className="text-white" />}
+              </div>
+              <div>
+                <p className={`font-bold text-[14px] ${AVD_AVAILABLE ? 'text-black' : 'text-gray-400'}`}>
+                  {AVD_AVAILABLE ? 'Depot aktivieren' : 'Noch nicht verfügbar'}
+                </p>
+                <p className="text-[11px] text-gray-500">+ 200 € staatl. Zulage / Jahr</p>
+              </div>
+            </div>
+            <Switch
+              checked={avdActive}
+              onCheckedChange={AVD_AVAILABLE ? setAvdActive : undefined}
+              disabled={!AVD_AVAILABLE}
+              className="data-[state=checked]:bg-black disabled:opacity-40 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          {!AVD_AVAILABLE && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 mb-3">
+              <Lock size={14} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                Diese Simulation zeigt dir bereits jetzt, wie das Altersvorsorgedepot deine Rente verbessern würde. Aktivieren kannst du es ab dem <strong>1. Januar 2027</strong>.
+              </p>
+            </div>
+          )}
+
+          {avdActive && AVD_AVAILABLE && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[13px] font-semibold text-black">Monatlicher Eigenbeitrag</span>
+                <span className="text-[13px] font-black text-black">{avdMonthlyContribution} €</span>
+              </div>
+              <input
+                type="range" min={25} max={200} step={25}
+                value={avdMonthlyContribution}
+                onChange={e => setAvdMonthlyContribution(Number(e.target.value))}
+                className="w-full accent-black cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-3">
+                <span>25 €</span><span>200 €</span>
+              </div>
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-[11px] text-gray-500">Effektiv investiert inkl. Zulage</span>
+                <span className="text-[12px] font-bold text-black">= {avdMonthlyContribution + 17} €/Monat</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div id="tutorial-simulate-events">

@@ -18,6 +18,7 @@ interface DashboardViewProps {
   inflationFactor: number;
   combinedMonthlyNominal: number;
   dynamicAssets: Asset[];
+  avdPayoutNominal: number;
   isPositive: boolean;
   leverBavNetto: number;
   leverSavings: number;
@@ -41,6 +42,7 @@ export function DashboardView({
   inflationFactor,
   combinedMonthlyNominal,
   dynamicAssets,
+  avdPayoutNominal,
   isPositive,
   leverBavNetto,
   leverSavings,
@@ -60,6 +62,7 @@ export function DashboardView({
       capitalAtRetirement,
       inflationFactor,
       dynamicAssets,
+      avdPayoutNominal,
     });
 
   return (

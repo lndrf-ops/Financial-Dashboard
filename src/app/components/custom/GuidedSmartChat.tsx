@@ -17,6 +17,8 @@ export interface GuidedSmartChatProps {
   setLifeEvents: React.Dispatch<React.SetStateAction<LifeEvent[]>>;
   stressTests: StressTests;
   setStressTests: React.Dispatch<React.SetStateAction<StressTests>>;
+  avdActive: boolean;
+  setAvdActive: (v: boolean) => void;
   onReset?: () => void;
 }
 
@@ -31,6 +33,7 @@ interface StateSnapshot {
   retirementAge: number;
   lifeEvents: LifeEvent[];
   stressTests: StressTests;
+  avdActive: boolean;
 }
 
 const STACK_DEPTH = 3;
@@ -41,6 +44,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     retirementAge, setRetirementAge,
     lifeEvents, setLifeEvents,
     stressTests, setStressTests,
+    avdActive, setAvdActive,
     onReset,
   } = props;
 
@@ -49,7 +53,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [chipStack, setChipStack] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7]);
+  const [chipStack, setChipStack] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8]);
   const [isExiting, setIsExiting] = useState(false);
   const [history, setHistory] = useState<StateSnapshot[]>([]);
   const nextId = useRef(1);
@@ -107,6 +111,11 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       execute: () => setStressTests(prev => ({ ...prev, bearMarket: !prev.bearMarket })),
     },
     {
+      label: "Altersvorsorgedepot 2027 simulieren",
+      botReply: "Ab Januar 2027 kannst du das neue staatliche Altersvorsorgedepot nutzen — mit bis zu 200 € Grundzulage pro Jahr. In der Simulation unter 'Erweiterte Simulation' siehst du schon jetzt, wie es deine Rente verbessern würde.",
+      execute: () => {},
+    },
+    {
       label: "Alles zurücksetzen",
       botReply: "Alles zurückgesetzt. Sparrate 150 €, Renteneintritt mit 67, keine Life-Events, keine Stresstests.",
       execute: () => {
@@ -114,6 +123,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
         setRetirementAge(67);
         setLifeEvents([]);
         setStressTests({ bearMarket: false, highInflation: false, longevity: false });
+        setAvdActive(false);
       },
     },
   ];
@@ -156,7 +166,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       setIsTyping(false);
       setMessages(prev => [...prev, { id: bid, from: 'bot', text: botText }]);
       if (execute) {
-        setHistory(prev => [...prev, { monthlyContribution, retirementAge, lifeEvents, stressTests }]);
+        setHistory(prev => [...prev, { monthlyContribution, retirementAge, lifeEvents, stressTests, avdActive }]);
         execute();
       }
     }, 520);
@@ -170,6 +180,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     setRetirementAge(snapshot.retirementAge);
     setLifeEvents(snapshot.lifeEvents);
     setStressTests(snapshot.stressTests);
+    setAvdActive(snapshot.avdActive);
     const bid = nextId.current++;
     setMessages(prev => [...prev, { id: bid, from: 'bot', text: 'Letzte Änderung rückgängig gemacht. Deine Simulation ist wieder auf dem vorherigen Stand.' }]);
   };
@@ -187,6 +198,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       [/haus|immobil/, 'Hauskauf'],
       [/98|langlebig/, '98'],
       [/crash|markt|bear/, 'Marktcrash'],
+      [/altersvorsorge|avd|depot|förder|zulage|riester|2027/, '2027'],
       [/zurück|reset/, 'zurück'],
     ];
     let found: ChatAction | undefined;
@@ -208,6 +220,16 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
   }, [messages, isTyping]);
 
   useEffect(() => {
+    if (!avdActive) {
+      const hintId = nextId.current++;
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          id: hintId,
+          from: 'bot',
+          text: '💡 Tipp: Ab Januar 2027 kommt das neue Altersvorsorgedepot — mit bis zu 200 € staatlicher Zulage pro Jahr. Unter "Erweiterte Simulation" kannst du schon jetzt sehen, wie es deine Rente beeinflussen würde.',
+        }]);
+      }, 800);
+    }
     setTimeout(() => inputRef.current?.focus(), 150);
   }, []);
 

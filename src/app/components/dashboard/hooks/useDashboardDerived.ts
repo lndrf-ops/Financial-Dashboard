@@ -7,6 +7,7 @@ interface DashboardDerivedInput {
   capitalAtRetirement: number;
   inflationFactor: number;
   dynamicAssets: Asset[];
+  avdPayoutNominal: number;
 }
 
 export interface SegmentDatum {
@@ -30,6 +31,7 @@ export function useDashboardDerived({
   capitalAtRetirement,
   inflationFactor,
   dynamicAssets,
+  avdPayoutNominal,
 }: DashboardDerivedInput) {
   const percentage = Math.round((realPurchasingPowerMonthly / targetPensionReal) * 100);
   const cappedPercentage = Math.min(percentage, 100);
@@ -57,7 +59,8 @@ export function useDashboardDerived({
     { label: "Portfolio",       value: Math.round(additionalMonthlyPayoutNominal * inflationFactor) },
     { label: "Betriebl. Rente", value: Math.round(companyValue     * inflationFactor) },
     { label: "Immobilie",       value: Math.round(realEstatePayout * inflationFactor) },
-  ].filter(s => s.value > 0).map((s, i) => ({ ...s, color: segmentPalette[i] }));
+    { label: "Vorsorgedepot",   value: Math.round(avdPayoutNominal * inflationFactor) },
+  ].filter(s => s.value > 0).map((s, i) => ({ ...s, color: segmentPalette[Math.min(i, segmentPalette.length - 1)] }));
 
   const totalChartValue = rawSources.reduce((sum, s) => sum + s.value, 0);
   const filledArc = (cappedPercentage / 100) * RING_CIRCUMFERENCE;
@@ -78,6 +81,13 @@ export function useDashboardDerived({
         ...asset,
         payout: Math.round(additionalMonthlyPayoutNominal),
         accumulatedValue: Math.round(capitalAtRetirement),
+        accumulatedLabel: 'Endkapital',
+      };
+    }
+    if (asset.id === 'avd') {
+      return {
+        ...asset,
+        payout: Math.round(avdPayoutNominal),
         accumulatedLabel: 'Endkapital',
       };
     }
