@@ -239,7 +239,7 @@ export function useAIOnboardingFlow(
   })();
 
   return {
-    step, progress: (step / TOTAL_STEPS) * 100, navConfig,
+    step, progress: (step / (TOTAL_STEPS - 1)) * 100, navConfig,
     syncStep,
     importMethod, dropState, processingStep, docSelected, showDocModal,
     setImportMethod, setDocSelected, setShowDocModal,
