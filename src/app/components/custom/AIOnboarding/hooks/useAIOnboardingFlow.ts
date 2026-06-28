@@ -6,6 +6,16 @@ import type {
 } from '../types';
 import { TR_AGE, TR_SAVINGS, MOCK_DETECTED, getDefaultTargetByAge } from '../constants';
 
+// Derives employmentType from detected pension assets.
+// bAV proves employment, Rürup proves self-employment, VBL proves public service.
+// Returns null when the documents don't carry enough signal (e.g. only DRV + Riester).
+function inferEmploymentFromAssets(assets: PensionAsset[]): EmploymentType | null {
+  if (assets.some(a => a.type === 'bAV')) return 'employed';
+  if (assets.some(a => a.type === 'ruerup')) return 'selfEmployed';
+  if (assets.some(a => a.provider.toLowerCase().includes('vbl') || a.provider.toLowerCase().includes('beamt'))) return 'public';
+  return null;
+}
+
 const TOTAL_STEPS = 7;
 
 export interface AIOnboardingFlowState {
@@ -191,7 +201,15 @@ export function useAIOnboardingFlow(
     };
 
     if (step === 3 && dropState === 'done') return {
-      onNext: handleNext,
+      onNext: () => {
+        const inferred = inferEmploymentFromAssets(pensionAssets);
+        if (inferred) {
+          setSelectedEmployment(inferred);
+          setStep(5); // skip StepEmployment — already determined by documents
+        } else {
+          handleNext(); // no signal → show manual selection
+        }
+      },
       nextDisabled: false,
       nextLabel: 'Werte übernehmen',
       onBack: handleBack,

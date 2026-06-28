@@ -54,6 +54,7 @@ export function useAppState() {
   };
 
   const handleAIOnboardingComplete = (data: AIOnboardingData) => {
+    setUserName('Lena');
     setDrvBonus(data.drvBonus);
     setCurrentAge(data.age);
     setRetirementAge([67]);
@@ -133,6 +134,10 @@ export function useAppState() {
       const update = assets.find(u => u.assetId === a.id);
       return update ? { ...a, payout: update.payout, accumulatedValue: update.accumulated } : a;
     }));
+    // If a bAV asset is synced with real data, the user is employed — activate VL/bAV features.
+    if (assets.some(u => u.assetId === 'company' && u.payout > 0)) {
+      setVlActive(true);
+    }
     triggerNotification(`${assets.length} Vorsorgequellen synchronisiert!`);
     setActiveView('dashboard');
   };

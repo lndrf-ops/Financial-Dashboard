@@ -237,6 +237,7 @@ export default function App() {
         activeView={s.activeView}
         onNavigate={id => { if (id === 'profile') setProfileFocusParams(false); ft.handleTabNav(id, s.setActiveView); }}
       />
+
     </div>
   );
 }

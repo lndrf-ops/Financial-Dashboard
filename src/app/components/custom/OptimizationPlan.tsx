@@ -34,8 +34,8 @@ export function OptimizationPlan({
   const [bavCardState, setBavCardState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [hrEmail, setHrEmail] = useState('');
 
-  const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(vlActive ? 'yes' : null);
-  const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(bavNettoVerzicht[0] > 0 ? 'yes' : null);
+  const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(null);
+  const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(null);
 
   // Step-5 DRV form download state
   const [formDownloaded, setFormDownloaded] = useState(false);
