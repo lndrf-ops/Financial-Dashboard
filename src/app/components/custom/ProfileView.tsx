@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { User, Shield, UploadCloud, ChevronDown, Info, Landmark, Link2, Key, Building, FileCheck, Send, Loader2, CheckCircle2 } from "lucide-react";
+import { User, Shield, UploadCloud, ChevronDown, Info, Landmark, Link2, Key, FileCheck, Send, Loader2, CheckCircle2, HelpCircle } from "lucide-react";
 import { ScenarioSimulator, ScenarioSimulatorProps } from "./ScenarioSimulator";
-import { DataSyncModal } from "./DataSyncModal";
+import { DataSyncModal, SyncAsset } from "./DataSyncModal";
 
 function CollapsibleSection({ title, defaultOpen = false, children }: { title: string, defaultOpen?: boolean, children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -20,16 +20,23 @@ function CollapsibleSection({ title, defaultOpen = false, children }: { title: s
 
 interface ProfileViewProps extends ScenarioSimulatorProps {
   onNavigateToPersonalData: () => void;
-  onSyncComplete: (payout: number, accumulated: number, type: 'drv' | 'bav') => void;
+  onSyncComplete: (assets: SyncAsset[]) => void;
   vlActive: boolean;
   bavNetto: number;
+  focusSimParams?: boolean;
+  onHelp?: () => void;
 }
 
 function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: number }) {
   const [vlState, setVlState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [bavState, setBavState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [hrEmail, setHrEmail] = useState('');
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailOk = isValidEmail(hrEmail);
 
   const handleSend = (type: 'vl' | 'bav') => {
+    if (!emailOk) return;
     if (type === 'vl') { setVlState('sending'); setTimeout(() => setVlState('sent'), 1800); }
     else { setBavState('sending'); setTimeout(() => setBavState('sent'), 1800); }
   };
@@ -41,7 +48,7 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
       </div>
       <div>
         <p className="font-bold text-[14px] text-emerald-700 leading-tight">Antrag gesendet!</p>
-        <p className="text-[11px] text-emerald-600 mt-0.5">{title} · hr@deinunternehmen.de</p>
+        <p className="text-[11px] text-emerald-600 mt-0.5">{title} · {hrEmail}</p>
       </div>
     </div>
   );
@@ -69,8 +76,8 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
         </div>
         <button
           onClick={() => handleSend(type)}
-          disabled={sending}
-          className="w-full h-11 bg-black hover:bg-gray-900 disabled:opacity-50 text-white font-bold text-[13px] rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          disabled={sending || !emailOk}
+          className="w-full h-11 bg-[#F9FAFB] hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200 text-black font-bold text-[13px] rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
         >
           {sending ? <><Loader2 size={14} className="animate-spin" /> Wird gesendet…</> : <><Send size={14} /> Antrag senden</>}
         </button>
@@ -83,12 +90,25 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
       <p className="text-[12px] text-gray-500 leading-relaxed">
         Diese Anträge werden direkt an deine Personalabteilung gesendet — vorausgefüllt mit deinen Daten.
       </p>
+      <div>
+        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">E-Mail HR-Abteilung</label>
+        <input
+          type="email"
+          value={hrEmail}
+          onChange={e => setHrEmail(e.target.value)}
+          placeholder="hr@unternehmen.de"
+          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] text-black focus:outline-none focus:border-black transition-colors"
+        />
+        {hrEmail && !emailOk && (
+          <p className="text-[11px] text-red-500 mt-1">Bitte eine gültige E-Mail-Adresse eingeben.</p>
+        )}
+      </div>
       {vlActive && (vlState === 'sent'
         ? <SentCard title="VL-Sparen" />
         : <PendingCard
             type="vl"
             title="Antrag auf VL-Sparen"
-            subtitle="hr@deinunternehmen.de · Kostenlos"
+            subtitle="Kostenlos · Bearbeitungszeit 2–4 Wochen"
             bullets={["Bis zu 40 € monatlich vom Arbeitgeber", "Fließt direkt in deinen ETF-Sparplan", "Bearbeitungszeit: 2–4 Wochen"]}
           />
       )}
@@ -97,7 +117,7 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
         : <PendingCard
             type="bav"
             title="Antrag auf Entgeltumwandlung"
-            subtitle={`hr@deinunternehmen.de · ${bavNetto} € netto`}
+            subtitle={`${bavNetto} € netto · Bearbeitungszeit 2–4 Wochen`}
             bullets={["Steuervorteile ab dem nächsten Gehalt", "Bruttoverzicht senkt deine Steuerlast", "Bearbeitungszeit: 2–4 Wochen"]}
           />
       )}
@@ -106,16 +126,21 @@ function AntraegSection({ vlActive, bavNetto }: { vlActive: boolean; bavNetto: n
 }
 
 export function ProfileView(props: ProfileViewProps) {
-  const [syncType, setSyncType] = useState<'drv' | 'bav' | null>(null);
+  const [showSync, setShowSync] = useState(false);
   const showAntraege = props.vlActive || props.bavNetto > 0;
 
   return (
     <div className="bg-white min-h-screen text-black w-full pb-32">
-      {syncType && <DataSyncModal type={syncType} onClose={() => setSyncType(null)} onSuccess={(payout, acc, type) => { setSyncType(null); props.onSyncComplete(payout, acc, type); }} />}
+      {showSync && <DataSyncModal onClose={() => setShowSync(false)} onSuccess={(assets) => { setShowSync(false); props.onSyncComplete(assets); }} />}
 
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl px-6 py-6 border-b border-gray-100">
-        <h1 className="font-extrabold text-xl tracking-tight text-black">Profil & Daten</h1>
-        <p className="text-xs text-gray-500 mt-1">Verwalte deine Parameter und Quellen</p>
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl px-6 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h1 className="font-extrabold text-xl tracking-tight text-black">Profil & Daten</h1>
+          <p className="text-xs text-gray-500 mt-1">Verwalte deine Parameter und Quellen</p>
+        </div>
+        <button onClick={props.onHelp} className="text-gray-400 hover:text-black transition-colors cursor-pointer">
+          <HelpCircle size={20} strokeWidth={1.75} />
+        </button>
       </div>
 
       <div className="px-6 pt-6 space-y-4">
@@ -169,39 +194,33 @@ export function ProfileView(props: ProfileViewProps) {
 
         <div id="tutorial-profile-datasync">
         <CollapsibleSection title="Daten-Sync" defaultOpen={false}>
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div onClick={() => setSyncType('drv')} className="border border-gray-200 rounded-2xl p-4 bg-[#F9FAFB] hover:bg-gray-100 transition-colors cursor-pointer group flex flex-col items-center text-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#F4F4F5] flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="mt-4">
+            <div
+              onClick={() => setShowSync(true)}
+              className="border border-gray-200 rounded-2xl p-4 bg-[#F9FAFB] hover:bg-gray-100 transition-colors cursor-pointer group flex items-center gap-4 mb-4"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#F4F4F5] flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
                 <UploadCloud className="text-black" size={20} strokeWidth={2} />
               </div>
               <div>
-                <p className="text-[13px] font-bold text-black mb-1">Renten-PDF</p>
-                <p className="text-[10px] text-gray-500">DRV KI-Scan</p>
+                <p className="text-[13px] font-bold text-black mb-0.5">Alle Vorsorgepapiere importieren</p>
+                <p className="text-[11px] text-gray-500">DRV · bAV · Riester · Rürup · Privat</p>
               </div>
             </div>
-            <div onClick={() => setSyncType('bav')} className="border border-gray-200 rounded-2xl p-4 bg-[#F9FAFB] hover:bg-gray-100 transition-colors cursor-pointer group flex flex-col items-center text-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#F4F4F5] flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Building className="text-black" size={20} strokeWidth={2} />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-black mb-1">HR-Portal</p>
-                <p className="text-[10px] text-gray-500">bAV verknüpfen</p>
-              </div>
+            <div className="bg-[#F9FAFB] border border-gray-200 p-4 rounded-xl">
+              <h4 className="text-black font-bold text-[11px] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Info size={14} /> Warum ist der Sync wichtig?
+              </h4>
+              <p className="text-[11px] text-gray-600 leading-relaxed">
+                Die jährliche Renteninformation der DRV weist deine Rente stets <span className="font-bold text-black">Brutto</span> aus. Unser Algorithmus bereinigt vollautomatisch um ca. 11 % KV/PV sowie die nachgelagerte Besteuerung — damit planst du mit echten Netto-Werten.
+              </p>
             </div>
-          </div>
-          <div className="bg-[#F9FAFB] border border-gray-200 p-4 rounded-xl mt-4">
-            <h4 className="text-black font-bold text-[11px] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Info size={14} /> Warum ist der Sync wichtig?
-            </h4>
-            <p className="text-[11px] text-gray-600 leading-relaxed">
-              Die jährliche Renteninformation der Deutschen Rentenversicherung (DRV) weist deine Rente stets <span className="font-bold text-black">Brutto</span> aus. Unser Algorithmus bereinigt deine Daten vollautomatisch um ca. 11% Kranken- und Pflegeversicherung sowie die nachgelagerte Besteuerung, um mit echten Netto-Werten planen zu können.
-            </p>
           </div>
         </CollapsibleSection>
         </div>{/* tutorial-profile-datasync */}
 
         <div id="tutorial-profile-simparams">
-        <CollapsibleSection title="Simulations-Parameter" defaultOpen={false}>
+        <CollapsibleSection title="Simulations-Parameter" defaultOpen={props.focusSimParams ?? false}>
           <p className="text-xs text-gray-500 mb-6 mt-4 leading-relaxed">
             Passe deine Annahmen für Inflation, Lebenserwartung und Rendite an. Diese globalen Einstellungen verändern die Prognose deines Dashboards.
           </p>

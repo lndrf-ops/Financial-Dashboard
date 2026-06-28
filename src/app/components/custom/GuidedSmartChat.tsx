@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, RefreshCw, Bot, MessageCircle, Undo2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, RefreshCw, Bot, MessageCircle, Undo2, HelpCircle } from "lucide-react";
 import { LifeEvent, StressTests } from "./SimulateView";
 
 interface ChatAction {
@@ -20,6 +20,7 @@ export interface GuidedSmartChatProps {
   avdActive: boolean;
   setAvdActive: (v: boolean) => void;
   onReset?: () => void;
+  onHelp?: () => void;
 }
 
 interface Message {
@@ -46,6 +47,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     stressTests, setStressTests,
     avdActive, setAvdActive,
     onReset,
+    onHelp,
   } = props;
 
   const [messages, setMessages] = useState<Message[]>([
@@ -60,7 +62,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const buildActions = (): ChatAction[] => [
+  const buildActions = useCallback((): ChatAction[] => [
     {
       label: "Sparrate um 50 € erhöhen",
       botReply: `Erledigt! Ich habe deine Sparrate auf ${monthlyContribution + 50} € angehoben. Über die Jahrzehnte macht das einen erheblichen Unterschied.`,
@@ -76,7 +78,12 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       botReply: "Ich habe ein Sabbatical mit 40 Jahren (15.000 €) zu deiner Simulation hinzugefügt. Das Leben ist mehr als nur sparen!",
       execute: () => {
         if (!lifeEvents.some(e => e.type === 'sabbatical' && e.age === 40)) {
-          setLifeEvents(prev => [...prev, { age: 40, type: 'sabbatical', cost: 15000 }]);
+          setLifeEvents(prev => [...prev, {
+            id: Math.random().toString(36).substring(7),
+            age: 40, type: 'sabbatical', cost: 15000,
+            label: 'Sabbatical (Weltreise)',
+            description: '1 Jahr Auszeit. Sparrate pausiert, 15.000 € Kosten.',
+          }]);
         }
       },
     },
@@ -84,7 +91,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       label: "Was passiert bei hoher Inflation?",
       botReply: stressTests.highInflation
         ? "Ich habe den Hochinflations-Stresstest deaktiviert. Zurück zum Basisszenario."
-        : "Aktiviert! Sieh dir an, wie sich 3,5 % Inflation langfristig auf deine Kaufkraft auswirkt.",
+        : "Aktiviert! Sieh dir an, wie sich 5 % Inflation langfristig auf deine Kaufkraft auswirkt.",
       execute: () => setStressTests(prev => ({ ...prev, highInflation: !prev.highInflation })),
     },
     {
@@ -92,7 +99,12 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       botReply: "Ich habe einen Hauskauf mit 45 Jahren (50.000 € Eigenkapital) in deine Simulation eingebaut.",
       execute: () => {
         if (!lifeEvents.some(e => e.type === 'realestate' && e.age === 45)) {
-          setLifeEvents(prev => [...prev, { age: 45, type: 'realestate', cost: 50000 }]);
+          setLifeEvents(prev => [...prev, {
+            id: Math.random().toString(36).substring(7),
+            age: 45, type: 'realestate', cost: 50000,
+            label: 'Immobilienkauf',
+            description: 'Eigenkapital-Einbringung für ein Haus.',
+          }]);
         }
       },
     },
@@ -126,7 +138,11 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
         setAvdActive(false);
       },
     },
-  ];
+  ], [
+    monthlyContribution, retirementAge, lifeEvents,
+    stressTests, setMonthlyContribution, setRetirementAge,
+    setLifeEvents, setStressTests, setAvdActive,
+  ]);
 
   const allActions = buildActions();
 
@@ -211,7 +227,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
     if (found) {
       postMessage(text, found.botReply, found.execute);
     } else {
-      postMessage(text, "Das kann ich dir gerade nicht beantworten — frag mich nach deiner Sparrate, deinem Rentenalter oder einem Szenario wie einem Marktcrash.");
+      postMessage(text, "Das habe ich noch nicht ganz verstanden. Am besten kann ich dir bei Sparrate, Renteneintritt oder Szenarien helfen — z.B.: \"Erhöhe meine Sparrate auf 300 €\" oder \"Simuliere Marktcrash\".");
     }
   };
 
@@ -230,13 +246,12 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
         }]);
       }, 800);
     }
-    setTimeout(() => inputRef.current?.focus(), 150);
   }, []);
 
   const visibleStack = chipStack.slice(0, STACK_DEPTH);
 
   return (
-    <div className="flex flex-col h-full pb-24 bg-white">
+    <div className="flex flex-col h-full bg-white" style={{ paddingBottom: 'max(6rem, env(safe-area-inset-bottom, 6rem))' }}>
 
       {/* Header */}
       <div id="tutorial-chat-header" className="shrink-0 sticky top-0 z-10 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center gap-3">
@@ -251,11 +266,16 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
           <p className="text-black font-extrabold text-[17px] tracking-tight leading-none">Finn</p>
           <p className="text-gray-400 text-[11px] mt-0.5">Dein KI-Rentenassistent</p>
         </div>
-        <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-gray-300 border border-gray-200 rounded-full px-2.5 py-1">Beta</span>
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300 border border-gray-200 rounded-full px-2.5 py-1">Beta</span>
+          <button onClick={onHelp} className="text-gray-400 hover:text-black transition-colors cursor-pointer">
+            <HelpCircle size={20} strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3" style={{ minHeight: 0 }}>
+      <div id="chat-messages" className="flex-1 overflow-y-auto px-4 py-5 space-y-3" style={{ minHeight: 0 }}>
         {messages.map(msg => (
           <div key={msg.id} className={`flex gap-2.5 ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.from === 'bot' && (
@@ -288,7 +308,7 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
       </div>
 
       {/* Chip stack + Input */}
-      <div className="shrink-0 border-t border-gray-100 bg-white/90 backdrop-blur-xl px-4 pt-3 pb-4 space-y-2.5">
+      <div id="chat-bottom-bar" className="shrink-0 border-t border-gray-100 bg-white/90 backdrop-blur-xl px-4 pt-3 pb-4 space-y-2.5">
 
         {/* Chip stack */}
         <div id="tutorial-chat-chips" className="flex items-start gap-2">
@@ -319,9 +339,10 @@ export function GuidedSmartChat(props: GuidedSmartChatProps) {
                   <button
                     onClick={handleStackChipClick}
                     disabled={isTyping || !isFront || isExiting}
-                    className="w-full h-10 px-4 rounded-xl bg-[#F4F4F5] hover:bg-black hover:text-white text-black text-[11px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed cursor-pointer text-left truncate"
+                    className="w-full h-10 px-4 rounded-xl bg-[#F4F4F5] hover:bg-black hover:text-white text-black text-[11px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed cursor-pointer text-left flex items-center justify-between gap-2"
                   >
-                    {action.label}
+                    <span className="truncate">{action.label}</span>
+                    {isFront && <span className="shrink-0 text-[9px] font-bold text-gray-400 group-hover:text-white">Tippen →</span>}
                   </button>
                 </div>
               );

@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { HelpCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { usePensionMath } from "./hooks/usePensionMath";
 import { useAppState } from "./hooks/useAppState";
@@ -11,7 +10,7 @@ import { Confetti } from "./components/Confetti";
 import { NotificationToast } from "./components/NotificationToast";
 import { LogoutConfirmSheet } from "./components/LogoutConfirmSheet";
 import { BottomNavBar } from "./components/BottomNavBar";
-import { TutorialOverlay } from "./components/tutorial/TutorialOverlay";
+
 import { FeatureTutorial } from "./components/tutorial/FeatureTutorial";
 import { DashboardView } from "./components/dashboard/DashboardView";
 
@@ -27,9 +26,7 @@ import { GuidedSmartChat } from "./components/custom/GuidedSmartChat";
 export default function App() {
   const s = useAppState();
   const ft = useFeatureTutorial(s.activeView);
-
-  const showTutorial = false;
-  const tutorialStep = 0;
+  const [profileFocusParams, setProfileFocusParams] = useState(false);
 
   const {
     capitalAtRetirement,
@@ -82,10 +79,11 @@ export default function App() {
 
   if (s.activeView === 'welcome') return <WelcomeView onStart={() => s.setActiveView('aionboarding')} onPersonas={() => s.setActiveView('onboarding')} />;
   if (s.activeView === 'aionboarding') return <AIOnboarding onComplete={s.handleAIOnboardingComplete} onSwitchToPersonas={() => s.setActiveView('welcome')} />;
-  if (s.activeView === 'onboarding')   return <Onboarding onSelectPersona={s.handleLoadPersona} onSwitchToAI={() => s.setActiveView('welcome')} />;
+  if (s.activeView === 'onboarding')   return <Onboarding onSelectPersona={s.handleLoadPersona} onSwitchToAI={() => s.setActiveView('aionboarding')} />;
   if (s.activeView === 'personalData') return <PersonalDataView onBack={() => s.setActiveView('profile')} />;
 
   if (s.activeView === 'optimize') {
+    const bavAlreadyExists = s.dynamicAssets.some(a => a.id === 'company' && a.payout > 0);
     return (
       <OptimizationPlan
         onBack={() => s.setActiveView('dashboard')}
@@ -104,6 +102,7 @@ export default function App() {
         setBavNettoVerzicht={s.setBavNettoVerzicht}
         suggestedBavNettoAmount={leverBavNetto}
         drvBonus={s.drvBonus}
+        bavAlreadyExists={bavAlreadyExists}
         currentAge={s.currentAge}
         lifeExpectancy={s.lifeExpectancy[0]}
         inflation={s.inflation[0]}
@@ -118,14 +117,6 @@ export default function App() {
 
       {s.showConfetti && <Confetti />}
 
-      {showTutorial && (
-        <TutorialOverlay
-          step={tutorialStep}
-          onNext={() => {}}
-          onComplete={() => s.setActiveView('dashboard')}
-        />
-      )}
-
       {ft.featureTutorialTab && (
         <FeatureTutorial
           tab={ft.featureTutorialTab}
@@ -136,24 +127,14 @@ export default function App() {
         />
       )}
 
-      {(['invest', 'simulate', 'profile', 'chat'] as const).includes(s.activeView as any) && !ft.featureTutorialTab && (
-        <button
-          onClick={() => ft.open(s.activeView)}
-          className="fixed top-[18px] right-5 z-[60] text-gray-400 hover:text-black transition-colors cursor-pointer"
-        >
-          <HelpCircle size={20} strokeWidth={1.75} />
-        </button>
-      )}
-
-      {s.notification && <NotificationToast message={s.notification} onDismiss={() => s.setNotification(null)} />}
+{s.notification && <NotificationToast message={s.notification} onDismiss={() => s.setNotification(null)} />}
 
       {s.activeView === 'dashboard' && (
         <DashboardView
           userName={s.userName}
           retirementAge={s.retirementAge[0]}
           monthlyContribution={s.monthlyContribution[0]}
-          totalNetWorthAtRetirement={totalNetWorthAtRetirement}
-          activeLifeExpectancy={activeLifeExpectancy}
+          yearsLeft={s.retirementAge[0] - s.currentAge}
           realPurchasingPowerMonthly={realPurchasingPowerMonthly}
           targetPensionReal={s.targetPensionReal[0]}
           additionalMonthlyPayoutNominal={additionalMonthlyPayoutNominal}
@@ -165,17 +146,20 @@ export default function App() {
           isPositive={isPositive}
           leverBavNetto={leverBavNetto}
           leverSavings={leverSavings}
+          currentGap={currentGap}
+          vlActive={s.vlActive}
           onBellClick={() => s.triggerNotification(`Dein Sparplan über ${s.monthlyContribution[0]} € wurde erfolgreich ausgeführt.`)}
           onHelpClick={() => ft.open('dashboard')}
           onLogoutClick={() => s.setShowLogoutConfirm(true)}
           onUpdateAsset={s.handleUpdateAsset}
           onOptimize={() => s.setActiveView('optimize')}
+          onSimulate={() => { setProfileFocusParams(true); s.setActiveView('profile'); }}
         />
       )}
 
       {s.activeView === 'invest' && (
         <div className="pb-24">
-          <InvestView monthlyContribution={s.monthlyContribution[0]} assets={s.dynamicAssets} />
+          <InvestView monthlyContribution={s.monthlyContribution[0]} expectedReturn={s.expectedReturn[0]} assets={s.dynamicAssets} onHelp={() => ft.open('invest')} />
         </div>
       )}
 
@@ -192,6 +176,7 @@ export default function App() {
             setAvdActive={s.setAvdActive}
             avdMonthlyContribution={s.avdMonthlyContribution[0]}
             setAvdMonthlyContribution={val => s.setAvdMonthlyContribution([val])}
+            onHelp={() => ft.open('simulate')}
           />
         </div>
       )}
@@ -214,6 +199,8 @@ export default function App() {
             onSyncComplete={s.handleDataSync}
             vlActive={s.vlActive}
             bavNetto={s.bavNettoVerzicht[0]}
+            focusSimParams={profileFocusParams}
+            onHelp={() => ft.open('profile')}
           />
         </div>
       )}
@@ -242,12 +229,13 @@ export default function App() {
           avdActive={s.avdActive}
           setAvdActive={s.setAvdActive}
           onReset={() => s.setChatResetKey(k => k + 1)}
+          onHelp={() => ft.open('chat')}
         />
       </div>
 
       <BottomNavBar
         activeView={s.activeView}
-        onNavigate={id => ft.handleTabNav(id, s.setActiveView)}
+        onNavigate={id => { if (id === 'profile') setProfileFocusParams(false); ft.handleTabNav(id, s.setActiveView); }}
       />
     </div>
   );

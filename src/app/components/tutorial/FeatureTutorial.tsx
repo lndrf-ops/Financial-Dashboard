@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ChevronRight, Check,
   Target, BadgePercent, Zap, Layers,
@@ -46,81 +46,227 @@ const ICONS: Record<string, React.ReactNode[]> = {
   ],
 };
 
+const PAD = 10;
+const CORNER = 14;
+
+interface SpotRect { x: number; y: number; w: number; h: number; }
+
+function isElementInFixedContainer(el: Element): boolean {
+  let parent = el.parentElement;
+  while (parent) {
+    if (getComputedStyle(parent).position === 'fixed') return true;
+    parent = parent.parentElement;
+  }
+  return false;
+}
+
 export function FeatureTutorial({ tab, step, total, onNext, onComplete }: FeatureTutorialProps) {
   const feature = FEATURE_STEPS[tab]?.[step];
   const [visible, setVisible] = useState(false);
+  const [spotRect, setSpotRect] = useState<SpotRect | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement | null>(null);
+  // Lock scroll for the entire tutorial — prevent user-initiated scroll
+  useEffect(() => {
+    const prevent = (e: Event) => { e.preventDefault(); };
+    document.addEventListener('wheel', prevent, { passive: false });
+    document.addEventListener('touchmove', prevent, { passive: false });
+    return () => {
+      document.removeEventListener('wheel', prevent);
+      document.removeEventListener('touchmove', prevent);
+      spacerRef.current?.remove();
+      spacerRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 30);
+    setVisible(false);
+    setSpotRect(null);
+
+    // Clean up spacer from previous step
+    if (spacerRef.current) {
+      spacerRef.current.remove();
+      spacerRef.current = null;
+    }
+
+    const targetId = FEATURE_STEPS[tab]?.[step]?.targetId;
+    const el = targetId ? document.getElementById(targetId) : null;
+
+    // Skip step instantly when target element isn't in the DOM
+    if (targetId && !el) {
+      const t = setTimeout(() => {
+        if (step < total - 1) onNext();
+        else onComplete();
+      }, 50);
+      return () => clearTimeout(t);
+    }
+
+    if (el) {
+      const panelH = panelRef.current?.offsetHeight ?? 320;
+      const vH = window.innerHeight;
+      const isFixed = getComputedStyle(el).position === 'fixed';
+
+      if (!isFixed) {
+        // Normal scrollable page — center element between viewport top and panel top
+        const availableH = vH - panelH;
+        const idealCenterY = availableH / 2;
+
+        const r = el.getBoundingClientRect();
+        const elCenterInViewport = r.top + r.height / 2;
+        const scrollDelta = elCenterInViewport - idealCenterY;
+        const targetScrollY = window.scrollY + scrollDelta;
+
+        // If the document is too short to reach targetScrollY, add a temporary spacer
+        const docH = document.documentElement.scrollHeight;
+        if (targetScrollY > 0 && targetScrollY + vH > docH) {
+          const extraNeeded = targetScrollY + vH - docH + 40;
+          const spacer = document.createElement('div');
+          spacer.style.height = `${extraNeeded}px`;
+          spacer.style.pointerEvents = 'none';
+          document.body.appendChild(spacer);
+          spacerRef.current = spacer;
+        }
+
+        window.scrollTo({ top: Math.max(0, targetScrollY), behavior: 'smooth' });
+      }
+    }
+
+    // Wait for scroll/layout to settle before snapping the spotlight
+    const delay = el ? 420 : 30;
+    const t = setTimeout(() => {
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setSpotRect({ x: r.x, y: r.y, w: r.width, h: r.height });
+      }
+      setVisible(true);
+    }, delay);
+
     return () => clearTimeout(t);
-  }, [step, tab]);
+  }, [step, tab, total, onNext, onComplete]);
 
   const handleNext = () => {
     setVisible(false);
-    setTimeout(() => {
-      setVisible(false);
-      onNext();
-    }, 180);
+    setTimeout(onNext, 180);
   };
 
   const handleComplete = () => {
     setVisible(false);
-    setTimeout(onComplete, 200);
+    if (spacerRef.current) {
+      spacerRef.current.remove();
+      spacerRef.current = null;
+    }
+    setTimeout(() => {
+      onComplete();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 200);
+  };
+
+  const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (spotRect) {
+      const sx = spotRect.x - PAD;
+      const sy = spotRect.y - PAD;
+      const sw = spotRect.w + PAD * 2;
+      const sh = spotRect.h + PAD * 2;
+      const { clientX, clientY } = e;
+      if (clientX >= sx && clientX <= sx + sw && clientY >= sy && clientY <= sy + sh) return;
+    }
+    handleComplete();
   };
 
   if (!feature) { onComplete(); return null; }
 
   const isLast = step === total - 1;
   const icon = ICONS[tab]?.[step] ?? <Zap size={18} className="text-white" />;
+  const panelAtTop = (feature.panelPosition ?? 'bottom') === 'top';
+
+  // Spotlight geometry
+  const sx = spotRect ? spotRect.x - PAD : 0;
+  const sy = spotRect ? spotRect.y - PAD : 0;
+  const sw = spotRect ? spotRect.w + PAD * 2 : 0;
+  const sh = spotRect ? spotRect.h + PAD * 2 : 0;
+
+  const sheetTransform = visible
+    ? 'translateY(0)'
+    : panelAtTop ? 'translateY(-100%)' : 'translateY(100%)';
 
   return (
     <>
       <style>{`
-        @keyframes ft-backdrop-in {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes ft-sheet-in {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
-        }
         @keyframes ft-content-in {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
-      {/* Backdrop — tap to dismiss */}
-      <div
-        className="fixed inset-0 z-[90]"
+      {/* SVG Spotlight backdrop — cutout reveals the target element */}
+      <svg
         style={{
-          background: 'rgba(8,8,20,0.55)',
-          backdropFilter: 'blur(1px)',
+          position: 'fixed', inset: 0,
+          width: '100%', height: '100%',
+          zIndex: 90,
           opacity: visible ? 1 : 0,
           transition: 'opacity 220ms ease',
+          cursor: 'pointer',
         }}
-        onClick={handleComplete}
-      />
+        onClick={handleSvgClick}
+      >
+        <defs>
+          <mask id="ft-spotlight-mask">
+            <rect width="100%" height="100%" fill="white" />
+            {spotRect && (
+              <rect x={sx} y={sy} width={sw} height={sh} rx={CORNER} fill="black" />
+            )}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(8,8,20,0.72)" mask="url(#ft-spotlight-mask)" />
+      </svg>
 
-      {/* Sheet */}
+      {/* Highlight ring around the target element */}
+      {spotRect && (
+        <div
+          style={{
+            position: 'fixed',
+            left: sx, top: sy,
+            width: sw, height: sh,
+            borderRadius: CORNER,
+            border: '2px solid rgba(255,255,255,0.6)',
+            boxShadow: '0 0 0 4px rgba(255,255,255,0.07), 0 0 30px rgba(255,255,255,0.12)',
+            zIndex: 91,
+            pointerEvents: 'none',
+            opacity: visible ? 1 : 0,
+            transition: 'opacity 220ms ease',
+          }}
+        />
+      )}
+
+      {/* Info panel — slides from bottom (default) or top (panelAtTop) */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[91]"
-        style={{ maxWidth: 430, margin: '0 auto' }}
+        className="fixed left-0 right-0 z-[92]"
+        style={{ maxWidth: 430, margin: '0 auto', ...(panelAtTop ? { top: 0 } : { bottom: 0 }) }}
       >
         <div
-          className="bg-white rounded-t-[32px] shadow-[0_-8px_48px_rgba(0,0,0,0.18)]"
+          ref={panelRef}
+          className={`bg-white ${panelAtTop
+            ? 'rounded-b-[32px] shadow-[0_8px_48px_rgba(0,0,0,0.18)]'
+            : 'rounded-t-[32px] shadow-[0_-8px_48px_rgba(0,0,0,0.18)]'
+          }`}
           style={{
-            transform: visible ? 'translateY(0)' : 'translateY(100%)',
+            transform: sheetTransform,
             transition: 'transform 320ms cubic-bezier(0.32,0.72,0,1)',
-            paddingBottom: 'max(2.25rem, env(safe-area-inset-bottom, 2.25rem))',
+            ...(panelAtTop
+              ? { paddingTop: 'max(1.5rem, env(safe-area-inset-top, 1.5rem))', paddingBottom: '1.75rem' }
+              : { paddingBottom: 'max(2.25rem, env(safe-area-inset-bottom, 2.25rem))' }
+            ),
           }}
         >
-          {/* Drag handle */}
-          <div className="pt-4 px-6 pb-0">
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto" />
-          </div>
+          {/* Drag handle — top of sheet for bottom panel */}
+          {!panelAtTop && (
+            <div className="pt-4 px-6 pb-0">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto" />
+            </div>
+          )}
 
-          {/* Content — re-animates on each step */}
+          {/* Content */}
           <div
             key={`${tab}-${step}`}
             className="px-6 pt-5"
@@ -144,7 +290,7 @@ export function FeatureTutorial({ tab, step, total, onNext, onComplete }: Featur
               </span>
               <button
                 onClick={handleComplete}
-                className="text-[13px] font-medium text-gray-400 active:text-black transition-colors cursor-pointer"
+                className="text-[13px] font-semibold text-gray-400 active:text-black transition-colors cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-100 -mr-2"
               >
                 Überspringen
               </button>
@@ -181,7 +327,6 @@ export function FeatureTutorial({ tab, step, total, onNext, onComplete }: Featur
                   />
                 ))}
               </div>
-
               <button
                 onClick={isLast ? handleComplete : handleNext}
                 className="flex items-center gap-1.5 bg-black text-white text-[14px] font-bold px-6 py-3 rounded-2xl cursor-pointer active:scale-95 transition-transform select-none"
@@ -193,6 +338,13 @@ export function FeatureTutorial({ tab, step, total, onNext, onComplete }: Featur
               </button>
             </div>
           </div>
+
+          {/* Drag handle — bottom of sheet for top panel */}
+          {panelAtTop && (
+            <div className="pb-2 px-6 pt-4">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto" />
+            </div>
+          )}
         </div>
       </div>
     </>

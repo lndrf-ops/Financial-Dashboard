@@ -40,9 +40,13 @@ export function StepDocuments({ dropState, processingStep, docSelected, importMe
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
         <h1 className="text-2xl font-black text-black mb-2 leading-tight">Vorsorgepapiere werden analysiert.</h1>
-        <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+        <p className="text-sm text-gray-500 mb-3 leading-relaxed">
           {dropState === 'processing' ? 'Analysiere 3 Dokumente...' : 'Alle Dokumente erkannt!'}
         </p>
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 shrink-0">Demo</span>
+          <span className="text-[11px] text-amber-700 leading-tight">Beispieldaten — in der fertigen App werden deine echten Dokumente aus der TR-Ablage ausgelesen.</span>
+        </div>
         <div className="space-y-3">
           {MOCK_DETECTED.map((asset, idx) => {
             const detected = processingStep > idx;
@@ -91,12 +95,10 @@ export function StepDocuments({ dropState, processingStep, docSelected, importMe
             ? 'Sieht gut aus! Drücke auf Weiter — KI startet die Analyse.'
             : 'Tippe auf die Kachel — unsere KI liest deine Rentendokumente automatisch aus.'}
       </p>
-      {!docSelected && (
-        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4">
-          <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Vorschau</span>
-          <span className="text-[11px] text-amber-700 leading-tight">In der finalen App lädt TR deine Dokumente automatisch aus deiner Dokumentenablage.</span>
-        </div>
-      )}
+      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
+        <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 shrink-0">Demo</span>
+        <span className="text-[11px] text-amber-700 leading-tight">Beispieldaten — in der fertigen App werden deine echten TR-Dokumente automatisch ausgelesen.</span>
+      </div>
 
       <button
         onClick={onTileClick}

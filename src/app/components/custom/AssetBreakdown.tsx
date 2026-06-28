@@ -1,7 +1,58 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, X, Plus, Wallet } from "lucide-react";
+import { ChevronRight, ChevronDown, X, Plus, Wallet, Info, Lock } from "lucide-react";
 
-export interface Asset { id: string; name: string; subtitle: string; icon: any; payout: number; accumulatedLabel: string; accumulatedValue: number; }
+const assetInfo: Record<string, { headline: string; bullets: string[] }> = {
+  statutory: {
+    headline: 'Feste monatliche Auszahlung',
+    bullets: [
+      'Fließt direkt als feste Summe in die Rentenberechnung ein',
+      'Trage den Bruttobetrag aus deiner Renteninformation ein',
+      'Wird inflationsbereinigt für die reale Kaufkraftberechnung genutzt',
+    ],
+  },
+  company: {
+    headline: 'Feste monatliche Auszahlung',
+    bullets: [
+      'Bestehende bAV-Auszahlung fließt direkt ein',
+      'Zusätzliche Beiträge aus dem Optimierungsplan werden separat angespart',
+      'Entgeltumwandlung erhöht den Bruttoanteil um ca. Faktor 2,1',
+    ],
+  },
+  etf: {
+    headline: 'Wächst & wird verrentet',
+    bullets: [
+      'Startkapital wächst mit deiner Renditeerwartung (z.B. 7 % p.a.) bis zur Rente',
+      'Wird dann als monatlicher Entnahmeplan über deine Lebenserwartung ausgezahlt',
+      'Stresstest: optionaler –20 % Einmalschock beim Renteneintritt simulierbar',
+    ],
+  },
+  crypto: {
+    headline: 'Wie ETF gerechnet',
+    bullets: [
+      'Wird rechnerisch wie ETF-Kapital behandelt (gleiche Renditeerwartung)',
+      'Startkapital wächst und fließt als monatlicher Entnahmeplan ein',
+      'Krypto-Volatilität wird nicht separat modelliert — konservativer Ansatz',
+    ],
+  },
+  cash: {
+    headline: 'Puffer, erst zur Rente eingebracht',
+    bullets: [
+      'Cash wächst in der Ansparphase nicht (keine Verzinsung)',
+      'Wird beim Renteneintritt als Einmalkapital eingebracht und dann ausgezahlt',
+      'Wird zuerst für Lebensereignisse (Sabbatical, Hauskauf) verbraucht',
+    ],
+  },
+  realestate: {
+    headline: 'Mieteinnahme direkt + Wert im Nettovermögen',
+    bullets: [
+      'Monatliche Mietersparnis / Mieteinnahme fließt als feste Auszahlung ein',
+      'Der Immobilienwert wird nur im Nettovermögen angezeigt, nicht verrentet',
+      'Selbstgenutzte Immobilie ohne Mieteinnahme: Auszahlung auf 0 lassen',
+    ],
+  },
+};
+
+export interface Asset { id: string; name: string; subtitle: string; icon: any; payout: number; accumulatedLabel: string; accumulatedValue: number; locked?: boolean; }
 interface AssetBreakdownProps { assets: Asset[]; onUpdateAsset: (id: string, payout: number, accumulatedValue: number) => void; combinedMonthlyNominal: number; }
 
 export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }: AssetBreakdownProps) {
@@ -53,11 +104,21 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
             {visibleAssets.map((asset, i) => {
               const Icon = asset.icon;
               const isCalculated = calculatedAssets.includes(asset.id);
+              const isLocked = !!asset.locked;
 
               return (
-                <div key={asset.id} onClick={() => handleRowClick(asset)} className={`flex items-center p-4 cursor-pointer hover:bg-[#F9FAFB] transition-colors ${i < visibleAssets.length - 1 ? "border-b border-gray-100" : ""}`}>
-                  <div className="w-10 h-10 rounded-xl bg-[#F4F4F5] flex items-center justify-center shrink-0 mr-3.5">
+                <div
+                  key={asset.id}
+                  onClick={isLocked ? undefined : () => handleRowClick(asset)}
+                  className={`flex items-center p-4 transition-colors ${i < visibleAssets.length - 1 ? "border-b border-gray-100" : ""} ${isLocked ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-[#F9FAFB]"}`}
+                >
+                  <div className="relative w-10 h-10 rounded-xl bg-[#F4F4F5] flex items-center justify-center shrink-0 mr-3.5">
                     <Icon size={18} className="text-gray-500" strokeWidth={1.75} />
+                    {isLocked && (
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gray-700 rounded-full flex items-center justify-center">
+                        <Lock size={8} className="text-white" strokeWidth={2.5} />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-black mb-0.5 truncate">{asset.name}</p>
@@ -69,7 +130,10 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
                     </p>
                     <p className="text-[11px] text-gray-500">€ {asset.accumulatedValue.toLocaleString("de-DE", { maximumFractionDigits: 0 })} {asset.accumulatedLabel}</p>
                   </div>
-                  <ChevronRight size={14} className="text-gray-300 ml-2.5 shrink-0" />
+                  {isLocked
+                    ? <Lock size={14} className="text-gray-300 ml-2.5 shrink-0" />
+                    : <ChevronRight size={14} className="text-gray-300 ml-2.5 shrink-0" />
+                  }
                 </div>
               );
             })}
@@ -123,7 +187,25 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
               </div>
             </div>
 
-            <button onClick={handleSave} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-sm py-3 rounded-xl mt-6 transition-colors cursor-pointer">
+            {editingAsset && assetInfo[editingAsset.id] && (
+              <div className="mt-5 bg-[#F9FAFB] border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info size={13} className="text-gray-400 shrink-0" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Wie wird berechnet?</span>
+                </div>
+                <p className="text-[12px] font-bold text-black mb-2">{assetInfo[editingAsset.id].headline}</p>
+                <ul className="space-y-1.5">
+                  {assetInfo[editingAsset.id].bullets.map((b, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[12px] text-gray-600 leading-snug">
+                      <span className="text-gray-300 font-bold shrink-0 mt-0.5">—</span>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <button onClick={handleSave} className="w-full bg-black hover:bg-gray-900 text-white font-extrabold text-sm py-3 rounded-xl mt-4 transition-colors cursor-pointer">
               Änderungen speichern
             </button>
           </div>

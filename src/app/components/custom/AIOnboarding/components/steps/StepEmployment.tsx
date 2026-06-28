@@ -9,8 +9,8 @@ interface StepEmploymentProps {
 
 const OPTIONS: { id: EmploymentType; icon: React.ReactNode; title: string; subtitle: string }[] = [
   { id: 'employed',     icon: <Briefcase size={20} />, title: 'Angestellt (Privatwirtschaft)',        subtitle: 'bAV & VL möglich' },
-  { id: 'public',       icon: <Building2 size={20} />, title: 'Öffentlicher Dienst / Beamtenstatus',  subtitle: 'VBL-Pflichtversicherung aktiv' },
-  { id: 'selfEmployed', icon: <Calculator size={20} />, title: 'Selbstständig / Freiberuflich',       subtitle: 'Freiwillige DRV oder Rürup-Rente' },
+  { id: 'public',       icon: <Building2 size={20} />, title: 'Öffentlicher Dienst / Beamtenstatus',  subtitle: 'VBL-Pflichtversicherung' },
+  { id: 'selfEmployed', icon: <Calculator size={20} />, title: 'Selbstständig / Freiberuflich',       subtitle: 'Rürup-Rente' },
 ];
 
 export function StepEmployment({ selectedEmployment, onSelect }: StepEmploymentProps) {

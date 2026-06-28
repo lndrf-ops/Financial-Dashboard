@@ -16,7 +16,7 @@ const DEFAULT_ASSETS: Asset[] = [
   { id: "realestate", name: "Immobilie",                subtitle: "Eigenheim / Vermietung",        icon: Home,      payout: 0, accumulatedLabel: "Immobilienwert",     accumulatedValue: 0 },
   { id: "cash",       name: "Tagesgeld",                subtitle: "Sichere Liquidität",            icon: Landmark,  payout: 0, accumulatedLabel: "Start-Guthaben",     accumulatedValue: 0 },
   { id: "crypto",     name: "Kryptowährungen",          subtitle: "Bitcoin & Altcoins",            icon: Bitcoin,   payout: 0, accumulatedLabel: "Portfolio",          accumulatedValue: 0 },
-  { id: "avd",        name: "Altersvorsorgedepot",      subtitle: "Staatl. gefördert (ab 2027)",   icon: Wallet,    payout: 0, accumulatedLabel: "Depotwert",          accumulatedValue: 0 },
+  { id: "avd",        name: "Altersvorsorgedepot",      subtitle: "Staatl. gefördert (ab 2027)",   icon: Wallet,    payout: 0, accumulatedLabel: "Depotwert",          accumulatedValue: 0, locked: new Date() < new Date('2027-01-01') },
 ];
 
 export function useAppState() {
@@ -56,8 +56,11 @@ export function useAppState() {
   const handleAIOnboardingComplete = (data: AIOnboardingData) => {
     setDrvBonus(data.drvBonus);
     setCurrentAge(data.age);
+    setRetirementAge([67]);
     setMonthlyContribution([data.monthlySavings]);
     setTargetPensionReal([data.targetPension]);
+    const returnRate = data.employmentType === 'public' ? 5.5 : data.employmentType === 'selfEmployed' ? 6.5 : 7.0;
+    setExpectedReturn([returnRate]);
     setLifeEvents([]);
     setStressTests({ bearMarket: false, highInflation: false, longevity: false });
 
@@ -103,6 +106,10 @@ export function useAppState() {
     setRetirementAge([p.targetAge]);
     setMonthlyContribution([p.monthlySavings]);
     setTargetPensionReal([p.targetPension]);
+    setVlActive(false);
+    setBavNettoVerzicht([0]);
+    setAvdActive(false);
+    setHasShownSuccessToast(false);
     setLifeEvents([]);
     setStressTests({ bearMarket: false, highInflation: false, longevity: false });
     setDynamicAssets([
@@ -121,13 +128,12 @@ export function useAppState() {
     setDynamicAssets(prev => prev.map(a => a.id === id ? { ...a, payout, accumulatedValue } : a));
   };
 
-  const handleDataSync = (payout: number, accumulated: number, type: 'drv' | 'bav') => {
+  const handleDataSync = (assets: Array<{ assetId: string; payout: number; accumulated: number }>) => {
     setDynamicAssets(prev => prev.map(a => {
-      if (type === 'drv' && a.id === 'statutory') return { ...a, payout, accumulatedValue: accumulated };
-      if (type === 'bav' && a.id === 'company')   return { ...a, payout, accumulatedValue: accumulated };
-      return a;
+      const update = assets.find(u => u.assetId === a.id);
+      return update ? { ...a, payout: update.payout, accumulatedValue: update.accumulated } : a;
     }));
-    triggerNotification(`${type === 'drv' ? 'DRV-Rente' : 'bAV'} erfolgreich synchronisiert!`);
+    triggerNotification(`${assets.length} Vorsorgequellen synchronisiert!`);
     setActiveView('dashboard');
   };
 

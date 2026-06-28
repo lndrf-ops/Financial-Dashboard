@@ -4,12 +4,15 @@ import { Landmark, Briefcase, TrendingUp } from 'lucide-react';
 interface LeverCardsProps {
   leverBavNetto: number;
   leverSavings: number;
+  currentGap: number;
+  vlActive: boolean;
 }
 
-export function LeverCards({ leverBavNetto, leverSavings }: LeverCardsProps) {
-  const levers: { icon: React.ElementType; title: string; subtitle: string; gain: string }[] = [
-    { icon: Landmark,   title: "VL-Sparen aktivieren",   subtitle: "Arbeitgeberzuschuss",          gain: "+40 €/mtl." },
-    { icon: Briefcase,  title: "Betriebsrente nutzen",    subtitle: "Dein Arbeitgeber zahlt mit",   gain: `+${leverBavNetto} €/mtl.` },
+export function LeverCards({ leverBavNetto, leverSavings, currentGap, vlActive }: LeverCardsProps) {
+  const vlGain = currentGap === 0 ? 0 : Math.min(40, currentGap);
+  const levers: { icon: React.ElementType; title: string; subtitle: string; gain: string; hidden?: boolean }[] = [
+    { icon: Landmark,   title: "VL-Sparen aktivieren",   subtitle: "Arbeitgeberzuschuss",          gain: `+${vlGain} €/mtl.`, hidden: !vlActive || vlGain === 0 },
+    { icon: Briefcase,  title: "Betriebsrente nutzen",    subtitle: "Dein Arbeitgeber zahlt mit",   gain: `+${leverBavNetto} €/mtl.`, hidden: !vlActive },
     { icon: TrendingUp, title: "Sparrate erhöhen",        subtitle: "Privater Vermögensaufbau",     gain: `+${leverSavings} €/mtl.` },
   ];
 
@@ -17,7 +20,7 @@ export function LeverCards({ leverBavNetto, leverSavings }: LeverCardsProps) {
     <div id="tutorial-dashboard-hebel" className="px-6 pt-2 pb-2">
       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Deine 3 größten Hebel</p>
       <div className="space-y-2">
-        {levers.map(({ icon: Icon, title, subtitle, gain }) => (
+        {levers.filter(l => !l.hidden).map(({ icon: Icon, title, subtitle, gain }) => (
           <div key={title} className="w-full bg-[#F9FAFB] border border-gray-100 rounded-xl px-3 py-2.5 flex items-center gap-3">
             <div className="w-7 h-7 bg-[#F4F4F5] rounded-lg flex items-center justify-center shrink-0 self-center">
               <Icon size={14} className="text-black" />

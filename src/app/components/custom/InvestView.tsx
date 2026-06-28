@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight, HelpCircle } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import { Asset } from "./AssetBreakdown";
 
 interface InvestViewProps {
   monthlyContribution: number;
+  expectedReturn: number;
   assets: Asset[];
+  onHelp?: () => void;
 }
 
-export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
+export function InvestView({ monthlyContribution, expectedReturn, assets, onHelp }: InvestViewProps) {
   const [showTRModal, setShowTRModal] = useState(false);
   const hasCrypto = assets.some(a => a.id === "crypto" && a.accumulatedValue > 0);
 
@@ -17,6 +19,8 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
 
   const etfValue = assets.find(a => a.id === "etf")?.accumulatedValue || 0;
   const cryptoValue = assets.find(a => a.id === "crypto")?.accumulatedValue || 0;
+
+  const annualReturnFactor = 1 + expectedReturn / 100;
 
   const projectionData = useMemo(() => {
     const data = [];
@@ -28,24 +32,29 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
         year: `Jahr ${year}`,
         wert: Math.round(currentETF + currentCrypto)
       });
-      currentETF = (currentETF + etfShare * 12) * 1.07;
+      currentETF = (currentETF + etfShare * 12) * annualReturnFactor;
       currentCrypto = (currentCrypto + cryptoShare * 12) * 1.15;
     }
     return data;
-  }, [etfValue, cryptoValue, etfShare, cryptoShare]);
+  }, [etfValue, cryptoValue, etfShare, cryptoShare, annualReturnFactor]);
 
   return (
     <div className="w-full">
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl px-6 py-6 border-b border-gray-100">
-        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-1">
-          Ausführung durch
-        </p>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-            <span className="text-white font-black text-[10px]">TR</span>
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl px-6 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-1">
+            Ausführung durch
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
+              <span className="text-white font-black text-[10px]">TR</span>
+            </div>
+            <span className="font-extrabold text-xl tracking-tight text-black">Trade Republic</span>
           </div>
-          <span className="font-extrabold text-xl tracking-tight text-black">Trade Republic</span>
         </div>
+        <button onClick={onHelp} className="text-gray-400 hover:text-black transition-colors cursor-pointer">
+          <HelpCircle size={20} strokeWidth={1.75} />
+        </button>
       </div>
 
       <div className="px-6 pt-10 pb-6">
@@ -114,7 +123,7 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
               <div className="text-right flex items-center gap-3 shrink-0">
                 <div>
                   <p className="font-bold text-[15px] text-black">€ {etfShare}</p>
-                  <p className="text-xs text-emerald-600">≈ 7% p.a.</p>
+                  <p className="text-xs text-emerald-600">≈ {expectedReturn}% p.a.</p>
                 </div>
                 <ChevronRight size={16} className="text-gray-300" />
               </div>
@@ -134,7 +143,7 @@ export function InvestView({ monthlyContribution, assets }: InvestViewProps) {
                 <div className="text-right flex items-center gap-3 shrink-0">
                   <div>
                     <p className="font-bold text-[15px] text-black">€ {cryptoShare}</p>
-                    <p className="text-xs text-emerald-600">≈ 15% p.a. (hist.)</p>
+                    <p className="text-xs text-amber-600 font-semibold">⚠ Hohes Risiko</p>
                   </div>
                   <ChevronRight size={16} className="text-gray-300" />
                 </div>

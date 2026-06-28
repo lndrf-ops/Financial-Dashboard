@@ -16,6 +16,8 @@ interface OptimizationPlanProps {
   suggestedBavNettoAmount?: number;
   /** DRV Anrechnungszeiten bonus found during onboarding (0 = none found). */
   drvBonus?: number;
+  /** True when a bAV contract was already detected during onboarding. Adjusts step-3 copy. */
+  bavAlreadyExists?: boolean;
   currentAge: number;
   lifeExpectancy: number;
   inflation: number;
@@ -24,7 +26,7 @@ interface OptimizationPlanProps {
 export function OptimizationPlan({
   onBack, diff, monthlyContribution, setMonthlyContribution, expectedReturn, setExpectedReturn,
   retirementAge, setRetirementAge, vlActive, setVlActive, bavNettoVerzicht, setBavNettoVerzicht,
-  suggestedBavNettoAmount, drvBonus = 0,
+  suggestedBavNettoAmount, drvBonus = 0, bavAlreadyExists = false,
   currentAge, lifeExpectancy, inflation,
 }: OptimizationPlanProps) {
   const [step, setStep] = useState(1);
@@ -70,6 +72,8 @@ export function OptimizationPlan({
   // When drvBonus === 0 step 5 doesn't exist, so shift step 6+ down by 1 for display
   const effectiveStep = drvBonus > 0 ? step : (step >= 6 ? step - 1 : step);
   const progress = Math.min(100, (effectiveStep / totalSteps) * 100);
+  // Number of named action steps shown to the user (VL + bAV + Privat [+ DRV])
+  const actionStepCount = drvBonus > 0 ? 4 : 3;
 
   useEffect(() => {
     if (step === 1 && isPositive) onBack();
@@ -173,21 +177,28 @@ export function OptimizationPlan({
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
             <h1 className="text-2xl font-black text-black mb-3 leading-tight">Dein Aktionsplan.</h1>
             <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-              Dir fehlen aktuell noch <strong className="text-red-500">{currentGap} €</strong> pro Monat, um deinen Lebensstandard im Alter zu halten.
+              Dir fehlen aktuell noch <strong className="text-red-500">{currentGap.toLocaleString('de-DE')} €</strong> pro Monat, um deinen Lebensstandard im Alter zu halten.
             </p>
             <div className="bg-[#F9FAFB] border border-gray-200 p-5 rounded-2xl mb-8">
               <p className="text-[13px] text-gray-700 leading-relaxed font-medium flex items-start gap-2">
                 <Info size={15} className="text-black shrink-0 mt-0.5" />
-                <span>Keine Panik. Das entspricht dem Verzicht auf ca. <strong className="text-black">{formatGapRelativity(initialGap)}</strong>. Wir schließen diese Lücke in 3 simplen Schritten.</span>
+                <span>Keine Panik. Das entspricht dem Verzicht auf ca. <strong className="text-black">{formatGapRelativity(initialGap)}</strong>. Wir schließen diese Lücke in {actionStepCount} Schritten.</span>
               </p>
             </div>
+            <p className="text-[13px] text-gray-500 italic mb-8 leading-relaxed px-1">
+              {currentAge <= 30
+                ? `Mit ${currentAge} hast du die stärkste Waffe: Zeit.`
+                : currentAge <= 45
+                  ? `Mit ${currentAge} ist noch genug Spielraum — jeder Schritt zählt doppelt.`
+                  : `Mit ${retirementAge - currentAge} Jahren bis zur Rente zählt jede Entscheidung.`}
+            </p>
             <BottomNav onNext={handleNext} nextLabel="Los geht's" nextIcon={<ArrowRight size={18} />} />
           </div>
         )}
 
         {step === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 1 von 3</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 1</div>
             <h1 className="text-2xl font-black text-black mb-3 leading-tight">Geld vom Chef.</h1>
             <p className="text-sm text-gray-500 mb-8 leading-relaxed">
               Arbeitgeber verschenken oft bis zu 40 € pro Monat an{' '}
@@ -207,18 +218,39 @@ export function OptimizationPlan({
 
         {step === 3 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 2 von 3</div>
-            <h1 className="text-2xl font-black text-black mb-3 leading-tight">Die Brutto-Netto-Magie.</h1>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 2</div>
+            <h1 className="text-2xl font-black text-black mb-3 leading-tight">
+              {bavAlreadyExists ? 'Beitrag erhöhen.' : 'Die Brutto-Netto-Magie.'}
+            </h1>
             <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-              Durch die{' '}
-              <span className="inline-flex items-baseline">
-                betriebliche Altersvorsorge (bAV)
-                <InfoTooltip text="Ein Teil deines Bruttogehalts geht direkt in die Altersvorsorge, noch bevor Steuern abgezogen werden. So sparst du effektiv mehr, als dir netto fehlt." />
-              </span>
-              {' '}sparst du Steuern. Um deine verbleibende Lücke zu schließen, reicht ein kleiner Netto-Verzicht.
+              {bavAlreadyExists ? (
+                <>
+                  Du hast bereits eine{' '}
+                  <span className="inline-flex items-baseline">
+                    betriebliche Altersvorsorge (bAV)
+                    <InfoTooltip text="Ein Teil deines Bruttogehalts geht direkt in die Altersvorsorge, noch bevor Steuern abgezogen werden. So sparst du effektiv mehr, als dir netto fehlt." />
+                  </span>
+                  {' '}— durch eine Beitragserhöhung kannst du die verbleibende Lücke besonders steuereffizient schließen.
+                </>
+              ) : (
+                <>
+                  Durch die{' '}
+                  <span className="inline-flex items-baseline">
+                    betriebliche Altersvorsorge (bAV)
+                    <InfoTooltip text="Ein Teil deines Bruttogehalts geht direkt in die Altersvorsorge, noch bevor Steuern abgezogen werden. So sparst du effektiv mehr, als dir netto fehlt." />
+                  </span>
+                  {' '}sparst du Steuern. Um deine verbleibende Lücke zu schließen, reicht ein kleiner Netto-Verzicht.
+                </>
+              )}
             </p>
             <div className="space-y-3">
-              <OptionCard emoji={<Briefcase size={20} className={selectedBAV === 'yes' ? 'text-black' : 'text-white'} />} title={`bAV nutzen (${perfectBavNetto} € Netto)`} subtitle={`Fließt als ${Math.round(perfectBavNetto * 2.1)} € in deinen Vertrag`} active={selectedBAV === 'yes'} highlight={selectedBAV !== 'yes'} onClick={() => { setSelectedBAV('yes'); setBavNettoVerzicht([perfectBavNetto]); }} />
+              <OptionCard
+                emoji={<Briefcase size={20} className="text-black" />}
+                title={bavAlreadyExists ? `Beitrag erhöhen (${perfectBavNetto} € Netto)` : `bAV nutzen (${perfectBavNetto} € Netto)`}
+                subtitle={`Fließt als ${Math.round(perfectBavNetto * 2.1)} € in deinen Vertrag`}
+                active={selectedBAV === 'yes'}
+                onClick={() => { setSelectedBAV('yes'); setBavNettoVerzicht([perfectBavNetto]); }}
+              />
               <OptionCard emoji={<X size={20} className="text-gray-400" />} title="Überspringen" subtitle="Ich regle das lieber privat" active={selectedBAV === 'no'} onClick={() => { setSelectedBAV('no'); setBavNettoVerzicht([0]); }} />
             </div>
             <BottomNav onBack={handleBack} onNext={handleNext} nextDisabled={!selectedBAV} nextLabel="Weiter" nextIcon={<ChevronRight size={18} />} />
@@ -251,6 +283,7 @@ export function OptimizationPlan({
 
         {step === 5 && drvBonus > 0 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 4</div>
             <h1 className="text-2xl font-black text-black mb-2 leading-tight">Deine {drvBonus} € sichern.</h1>
             <p className="text-sm text-gray-500 mb-6 leading-relaxed">
               Die DRV hat deine Schul- oder Studienzeiten wahrscheinlich nicht erfasst. Mit dem Formular V0100 kannst du diese Anrechnungszeiten nachträglich geltend machen — wir haben es bereits für dich ausgefüllt.
@@ -441,24 +474,60 @@ export function OptimizationPlan({
         )}
 
         {step === 7 && (
-          <div className="flex-1 flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-6">
-              <CheckCircle2 size={40} className="text-emerald-600" />
+          <div className="flex-1 flex flex-col animate-in zoom-in-95 duration-500 pt-4">
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 size={32} className="text-emerald-600" />
+              </div>
+              <h1 className="text-3xl font-black text-black mb-2">Aktionsplan gesetzt.</h1>
+              <p className="text-sm text-gray-500 text-center px-2 leading-relaxed">
+                {(() => {
+                  const sent = [
+                    vlCardState === 'sent' && "VL-Sparen",
+                    bavCardState === 'sent' && `Entgeltumwandlung (${bavNettoVerzicht[0]} €)`,
+                  ].filter(Boolean).join(" & ");
+                  return sent
+                    ? `Anträge für ${sent} wurden an deine Personalabteilung gesendet.`
+                    : "Dein Plan ist gespeichert. Anträge kannst du jederzeit manuell einreichen.";
+                })()}
+              </p>
             </div>
-            <h1 className="text-3xl font-black text-black mb-2">Erfolgreich!</h1>
-            <p className="text-sm text-gray-500 text-center px-4 mb-10">
-              {(() => {
-                const sent = [
-                  vlCardState === 'sent' && "VL-Sparen",
-                  bavCardState === 'sent' && `Entgeltumwandlung (${bavNettoVerzicht[0]} €)`,
-                ].filter(Boolean).join(" & ");
-                return sent
-                  ? `Dein Plan ist aktiv. Die Anträge für ${sent} wurden an deine Personalabteilung gesendet.`
-                  : "Dein Plan wurde gespeichert. Du kannst die Anträge jederzeit manuell einreichen.";
-              })()}
-            </p>
+
+            <div className="bg-[#F9FAFB] border border-gray-200 rounded-2xl p-5 mb-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Was passiert als nächstes</p>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">Jetzt</span>
+                  <span className="text-[13px] text-gray-700 leading-snug">Dashboard zeigt deinen aktualisierten Rentenplan</span>
+                </div>
+                {vlCardState === 'sent' && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">2–4 Wo.</span>
+                    <span className="text-[13px] text-gray-700 leading-snug">HR richtet VL-Sparen ein — bis zu 40 € / Monat vom Arbeitgeber</span>
+                  </div>
+                )}
+                {bavCardState === 'sent' && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">2–4 Wo.</span>
+                    <span className="text-[13px] text-gray-700 leading-snug">Entgeltumwandlung startet mit dem nächsten Gehaltseingang</span>
+                  </div>
+                )}
+                {((vlActive && vlCardState !== 'sent') || (bavNettoVerzicht[0] > 0 && bavCardState !== 'sent')) && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] font-black text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">Offen</span>
+                    <span className="text-[13px] text-gray-700 leading-snug">
+                      {[
+                        vlActive && vlCardState !== 'sent' && 'VL-Sparen',
+                        bavNettoVerzicht[0] > 0 && bavCardState !== 'sent' && `Entgeltumwandlung (${bavNettoVerzicht[0]} €)`,
+                      ].filter(Boolean).join(' & ')} — Antrag manuell an deine Personalabteilung senden
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button onClick={onBack} className="w-full bg-black hover:bg-gray-900 text-white font-bold text-[15px] py-4 rounded-xl transition-colors cursor-pointer flex justify-center items-center gap-2">
-              Zurück zum Dashboard <ChevronRight size={18} />
+              Zum Dashboard <ChevronRight size={18} />
             </button>
           </div>
         )}

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { AlertTriangle, TrendingDown, Plane, Home as HomeIcon, Baby, Plus, X, Activity, Wallet, Lock } from "lucide-react";
+import { AlertTriangle, TrendingDown, Plane, Home as HomeIcon, Baby, Plus, X, Activity, Wallet, Lock, HelpCircle } from "lucide-react";
 
-const AVD_AVAILABLE = new Date() >= new Date('2027-01-01');
 import { Switch } from "../ui/switch";
 
 export interface LifeEvent {
@@ -15,9 +14,11 @@ interface SimulateViewProps {
   setLifeEvents: (events: LifeEvent[]) => void; stressTests: StressTests; setStressTests: (tests: StressTests) => void;
   avdActive: boolean; setAvdActive: (v: boolean) => void;
   avdMonthlyContribution: number; setAvdMonthlyContribution: (v: number) => void;
+  onHelp?: () => void;
 }
 
-export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEvents, stressTests, setStressTests, avdActive, setAvdActive, avdMonthlyContribution, setAvdMonthlyContribution }: SimulateViewProps) {
+export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEvents, stressTests, setStressTests, avdActive, setAvdActive, avdMonthlyContribution, setAvdMonthlyContribution, onHelp }: SimulateViewProps) {
+  const AVD_AVAILABLE = new Date() >= new Date('2027-01-01');
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   const availableEvents = [
@@ -39,10 +40,15 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
   const removeEvent = (id: string) => setLifeEvents(lifeEvents.filter(e => e.id !== id));
 
   return (
-    <div className="bg-white min-h-screen text-black w-full pb-32">
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl px-6 py-6 border-b border-gray-100">
-        <h1 className="font-extrabold text-xl tracking-tight text-black">Erweiterte Simulation</h1>
-        <p className="text-xs text-gray-500 mt-1">Stresstests & Lebensereignisse</p>
+    <div className="bg-white min-h-screen text-black w-full" style={{ paddingBottom: 'max(8rem, env(safe-area-inset-bottom, 8rem))' }}>
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl px-6 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h1 className="font-extrabold text-xl tracking-tight text-black">Erweiterte Simulation</h1>
+          <p className="text-xs text-gray-500 mt-1">Stresstests & Lebensereignisse</p>
+        </div>
+        <button onClick={onHelp} className="text-gray-400 hover:text-black transition-colors cursor-pointer">
+          <HelpCircle size={20} strokeWidth={1.75} />
+        </button>
       </div>
 
       <div className="px-6 pt-8">
@@ -93,7 +99,7 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
         </div>
 
         {/* ── Altersvorsorgedepot 2027 ─────────────────────────────────── */}
-        <div className="mb-10">
+        <div id="tutorial-simulate-avd" className="mb-10">
           <div className="flex items-center gap-2 mb-1">
             <h2 className={`text-[13px] font-semibold uppercase tracking-widest ${AVD_AVAILABLE ? 'text-black' : 'text-gray-400'}`}>Altersvorsorgedepot 2027</h2>
             {AVD_AVAILABLE
@@ -192,7 +198,15 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
 
         <div className="relative border-l border-gray-200 ml-5 space-y-8 pb-8">
           {lifeEvents.length === 0 ? (
-            <p className="text-xs text-gray-400 italic pl-6">Noch keine Lebensereignisse geplant.</p>
+            <div className="ml-6 bg-[#F9FAFB] border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+              <p className="text-[13px] text-gray-500">Noch keine Ereignisse geplant.</p>
+              <button
+                onClick={() => setShowAddMenu(true)}
+                className="flex items-center gap-1.5 text-[12px] font-bold text-black border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <Plus size={13} />Hinzufügen
+              </button>
+            </div>
           ) : (
             lifeEvents.map((event) => {
               const Icon = event.type === 'sabbatical' ? Plane : event.type === 'realestate' ? HomeIcon : Baby;
@@ -204,7 +218,7 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
                   </div>
                   <div className="flex justify-between items-end mb-1">
                     <p className="text-xs text-gray-500 font-bold">Alter {event.age}</p>
-                    <button onClick={() => removeEvent(event.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <button onClick={() => removeEvent(event.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
                       <X size={14} />
                     </button>
                   </div>
@@ -213,10 +227,16 @@ export function SimulateView({ currentAge, retirementAge, lifeEvents, setLifeEve
                     <p className="text-[11px] text-gray-500 mb-3">{event.description}</p>
                     <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Alter verschieben</span>
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => setLifeEvents(lifeEvents.map(e => e.id === event.id ? { ...e, age: Math.max(currentAge + 1, e.age - 1) } : e))} className="w-6 h-6 rounded bg-[#F4F4F5] border border-gray-200 flex items-center justify-center text-gray-500 hover:text-black hover:bg-gray-200 transition-colors">-</button>
-                        <span className="text-sm font-bold w-4 text-center text-black">{event.age}</span>
-                        <button onClick={() => setLifeEvents(lifeEvents.map(e => e.id === event.id ? { ...e, age: Math.min(retirementAge - 1, e.age + 1) } : e))} className="w-6 h-6 rounded bg-[#F4F4F5] border border-gray-200 flex items-center justify-center text-gray-500 hover:text-black hover:bg-gray-200 transition-colors">+</button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setLifeEvents(lifeEvents.map(e => e.id === event.id ? { ...e, age: Math.max(currentAge + 1, e.age - 1) } : e))}
+                          className="w-10 h-10 rounded-lg bg-[#F4F4F5] border border-gray-200 flex items-center justify-center text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
+                        >−</button>
+                        <span className="text-sm font-bold w-6 text-center text-black">{event.age}</span>
+                        <button
+                          onClick={() => setLifeEvents(lifeEvents.map(e => e.id === event.id ? { ...e, age: Math.min(retirementAge - 1, e.age + 1) } : e))}
+                          className="w-10 h-10 rounded-lg bg-[#F4F4F5] border border-gray-200 flex items-center justify-center text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
+                        >+</button>
                       </div>
                     </div>
                   </div>

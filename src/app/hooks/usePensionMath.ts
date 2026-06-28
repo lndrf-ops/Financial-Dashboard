@@ -111,8 +111,8 @@ export function usePensionMath({
     let capCash     = cashStart;
     let capAvd      = avdAccumulated;
     let loopSavings = monthlyContribution;
-    const agExtra   = (vlActive ? 40 : 0) + bavBruttoInvest;
-    const avdMonthly = avdActive ? avdMonthlyContribution + AVD_GRUNDZULAGE_YEARLY / 12 : 0;
+    const agExtra    = (vlActive ? 40 : 0) + bavBruttoInvest;
+    const avdMonthly = avdActive ? avdMonthlyContribution : 0;
 
     // Set once when the retirement phase begins; locked for the entire drawdown
     let retirementCapital    = 0;
@@ -146,6 +146,8 @@ export function usePensionMath({
           capInvested = capInvested * (1 + returnMonthly) + activeSavings;
           if (avdActive) capAvd = capAvd * (1 + returnMonthly) + avdMonthly;
         }
+        // State subsidy is paid once per year (not monthly) — add after year-end compounding
+        if (avdActive) capAvd += AVD_GRUNDZULAGE_YEARLY;
         if (dynamicSavings && (!event || event.type !== 'sabbatical')) {
           loopSavings *= 1.02; // 2 % annual contribution increase
         }

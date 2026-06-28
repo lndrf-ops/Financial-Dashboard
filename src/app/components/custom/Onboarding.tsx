@@ -21,6 +21,14 @@ export interface Persona {
   };
 }
 
+type GapSeverity = { label: string; color: string };
+
+const personaGapSeverity: Record<string, GapSeverity> = {
+  p1: { label: 'Lücke: klein',  color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  p2: { label: 'Lücke: mittel', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+  p3: { label: 'Lücke: groß',   color: 'bg-red-50 text-red-700 border-red-200' },
+};
+
 const personas: Persona[] = [
   {
     id: "p1",
@@ -28,10 +36,10 @@ const personas: Persona[] = [
     role: "Data Science Student & Werkstudent",
     age: 25,
     targetAge: 67,
-    targetPension: 2000,
-    monthlySavings: 150,
+    targetPension: 1800,
+    monthlySavings: 200,
     assets: {
-      statutoryPayout: 25, statutoryAcc: 1200, etfAcc: 3500, companyPayout: 0, companyAcc: 0, realestatePayout: 0, realestateAcc: 0, cashAcc: 2000, cryptoAcc: 1500,
+      statutoryPayout: 30, statutoryAcc: 1200, etfAcc: 3500, companyPayout: 0, companyAcc: 0, realestatePayout: 0, realestateAcc: 0, cashAcc: 2000, cryptoAcc: 1500,
     }
   },
   {
@@ -40,10 +48,10 @@ const personas: Persona[] = [
     role: "Senior IT Consultant",
     age: 32,
     targetAge: 65,
-    targetPension: 2500,
-    monthlySavings: 450,
+    targetPension: 2900,
+    monthlySavings: 350,
     assets: {
-      statutoryPayout: 850, statutoryAcc: 68000, etfAcc: 45000, companyPayout: 250, companyAcc: 22000, realestatePayout: 1100, realestateAcc: 350000, cashAcc: 15000, cryptoAcc: 0,
+      statutoryPayout: 650, statutoryAcc: 68000, etfAcc: 22000, companyPayout: 150, companyAcc: 0, realestatePayout: 0, realestateAcc: 0, cashAcc: 15000, cryptoAcc: 0,
     }
   },
   {
@@ -52,10 +60,10 @@ const personas: Persona[] = [
     role: "Projektleiter (Kurz vor Rente)",
     age: 58,
     targetAge: 66,
-    targetPension: 2800,
+    targetPension: 3000,
     monthlySavings: 200,
     assets: {
-      statutoryPayout: 1650, statutoryAcc: 210000, etfAcc: 18000, companyPayout: 350, companyAcc: 75000, realestatePayout: 1600, realestateAcc: 650000, cashAcc: 80000, cryptoAcc: 0,
+      statutoryPayout: 1550, statutoryAcc: 210000, etfAcc: 18000, companyPayout: 0, companyAcc: 0, realestatePayout: 0, realestateAcc: 350000, cashAcc: 80000, cryptoAcc: 0,
     }
   }
 ];
@@ -113,6 +121,11 @@ export function Onboarding({ onSelectPersona, onSwitchToAI }: OnboardingProps) {
                 <div className="flex-1 min-w-0">
                   <h3 className="text-[15px] font-bold text-black">{persona.name}, {persona.age}</h3>
                   <p className="text-[12px] text-gray-500 truncate pr-2">{persona.role}</p>
+                  {personaGapSeverity[persona.id] && (
+                    <span className={`inline-block mt-1.5 text-[10px] font-bold border rounded-full px-2 py-0.5 ${personaGapSeverity[persona.id].color}`}>
+                      {personaGapSeverity[persona.id].label}
+                    </span>
+                  )}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-[#F4F4F5] border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <FileText size={14} className="text-black" />

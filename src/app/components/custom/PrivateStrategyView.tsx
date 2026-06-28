@@ -136,7 +136,7 @@ export function PrivateStrategyView({
   if (gapToClose <= 0) {
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 3 von 3</div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 3</div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mb-6">
             <CheckCircle2 size={40} className="text-emerald-600" />
@@ -160,7 +160,7 @@ export function PrivateStrategyView({
 
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 3 von 3</div>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 3</div>
       <h1 className="text-2xl font-black text-black mb-1 leading-tight">Der private Turbo.</h1>
       <p className="text-sm text-gray-500 mb-5 leading-relaxed">
         Wähle deinen Weg – wir schließen die Lücke auf null.
