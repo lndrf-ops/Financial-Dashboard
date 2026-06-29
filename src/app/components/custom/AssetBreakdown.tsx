@@ -81,7 +81,7 @@ export function AssetBreakdown({ assets, onUpdateAsset, combinedMonthlyNominal }
 
   return (
     <>
-      <div className="px-6 mt-4 mb-6">
+      <div>
 
         <button
           onClick={() => setIsExpanded(!isExpanded)}

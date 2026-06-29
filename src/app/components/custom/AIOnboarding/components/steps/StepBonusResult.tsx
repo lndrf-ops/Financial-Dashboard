@@ -26,8 +26,8 @@ export function StepBonusResult({ educationTimesFound }: StepBonusResultProps) {
 
   return (
     <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col flex-1 justify-center text-center">
-      <div className="w-20 h-20 bg-[#F4F4F5] border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-        <CheckCircle2 size={40} className="text-black" />
+      <div className="w-20 h-20 bg-green-100 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-6">
+        <CheckCircle2 size={40} className="text-green-500" />
       </div>
       <h1 className="text-3xl font-black text-black mb-4">Alles erfasst!</h1>
       <p className="text-gray-500 leading-relaxed px-4 mb-8">

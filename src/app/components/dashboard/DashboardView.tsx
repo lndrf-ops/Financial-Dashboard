@@ -120,7 +120,7 @@ export function DashboardView({
       {!isPositive && <LeverCards leverBavNetto={leverBavNetto} leverSavings={leverSavings} currentGap={currentGap} vlActive={vlActive} />}
 
       {/* Asset breakdown */}
-      <div id="tutorial-dashboard-assets">
+      <div id="tutorial-dashboard-assets" className="px-6 mt-4 mb-6">
         <AssetBreakdown assets={displayAssets} onUpdateAsset={onUpdateAsset} combinedMonthlyNominal={combinedMonthlyNominal} />
       </div>
 

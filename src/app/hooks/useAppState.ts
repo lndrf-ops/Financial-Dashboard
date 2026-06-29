@@ -71,20 +71,16 @@ export function useAppState() {
     const otherPayout = data.pensionAssets.filter(a => a.type !== 'drv').reduce((s, a) => s + a.monthlyPayout, 0);
 
     let companyAsset: Asset;
-    let toastMsg: string;
 
     if (data.employmentType === 'public') {
       const vblPayout = otherPayout > 0 ? otherPayout : Math.round(drvPayout * 0.12);
       companyAsset = { id: "company", name: "VBL-Versicherung", subtitle: "Pflichtversicherung öffentl. Dienst", icon: Briefcase, payout: vblPayout, accumulatedLabel: "Angespartes Kapital", accumulatedValue: vblPayout > 0 ? vblPayout * 120 : 8000 };
-      toastMsg = "VBL-Pflichtversicherung erkannt & aktiviert";
       setVlActive(false);
     } else if (data.employmentType === 'selfEmployed') {
       companyAsset = { id: "company", name: "Rürup-Rente", subtitle: "Steuerlich gefördert (§ 10 EStG)", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Angespartes Kapital", accumulatedValue: otherPayout > 0 ? otherPayout * 120 : 0 };
-      toastMsg = "Rürup-Rente als Vorsorgeweg eingetragen";
       setVlActive(false);
     } else {
       companyAsset = { id: "company", name: "Betriebliche Rente", subtitle: "bAV & VL verfügbar", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Kapital", accumulatedValue: otherPayout > 0 ? 15000 : 0 };
-      toastMsg = "bAV & VL für dich freigeschaltet";
       setVlActive(true);
     }
 
@@ -97,7 +93,6 @@ export function useAppState() {
       { id: "crypto",     name: "Kryptowährungen",     subtitle: "Bitcoin & Altcoins",        icon: Bitcoin,    payout: 0,         accumulatedLabel: "Wallet",         accumulatedValue: 0 },
       { id: "avd",        name: "Altersvorsorgedepot", subtitle: "Staatl. gefördert (ab 2027)", icon: Wallet,  payout: 0,         accumulatedLabel: "Depotwert",      accumulatedValue: 0 },
     ]);
-    triggerNotification(toastMsg);
     setActiveView('dashboard');
   };
 
