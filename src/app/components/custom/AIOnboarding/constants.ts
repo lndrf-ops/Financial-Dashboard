@@ -8,7 +8,7 @@ export const INCOMES = Array.from({ length: 66 }, (_, i) => (i + 5) * 100);
 
 export const MOCK_DETECTED: PensionAsset[] = [
   { type: 'drv',     provider: 'Deutsche Rentenversicherung', monthlyPayout: 1450, inflationAdjusted: true  },
-  { type: 'bAV',     provider: 'Allianz',                    monthlyPayout: 280,  inflationAdjusted: false },
+  { type: 'bAV',     provider: 'Allianz',                    monthlyPayout: 130,  inflationAdjusted: false },
   { type: 'riester', provider: 'Deka Investment',            monthlyPayout: 115,  inflationAdjusted: false },
 ];
 

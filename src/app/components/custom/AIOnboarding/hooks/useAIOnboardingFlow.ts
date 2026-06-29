@@ -130,9 +130,10 @@ export function useAIOnboardingFlow(
         initialCapital: 0,
         income,
         pensionAssets,
-        drvBonus: educationTimesFound ? 75 : 0,
+        drvBonusFound: educationTimesFound,
         employmentType: selectedEmployment ?? 'employed',
         educationTimesFound,
+        feeling: selectedFeeling ?? undefined,
       };
       onComplete(result);
     }, 2500);

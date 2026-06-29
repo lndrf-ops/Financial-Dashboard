@@ -5,12 +5,14 @@ import { requiredMonthlyPMT } from "../../utils/financeMath";
 type PackageId = 'A' | 'B' | 'C' | 'D';
 
 const SAFE_RATE = 0.035;
-const BAV_LEVERAGE = 2.1;
+const BAV_LEVERAGE = 1.9;
 const MAX_AGE = 72;
 const DELAY_C = 2;
 
 export interface PrivateStrategyViewProps {
-  currentGap: number;
+  /** Stable gap snapshot from when step 4 was first entered — used for PMT calculations
+   *  so card values don't change when the user switches between options. */
+  originalGap: number;
   expectedReturn: number;
   inflation: number;
   currentAge: number;
@@ -73,7 +75,7 @@ function PackageCard({ selected, icon, badge, title, subtitle, onClick }: {
 }
 
 export function PrivateStrategyView({
-  currentGap,
+  originalGap,
   expectedReturn, inflation,
   currentAge, originalRetirementAge, lifeExpectancy,
   originalContribution, originalBavNetto, bavAvailable = true,
@@ -81,7 +83,6 @@ export function PrivateStrategyView({
   onNext, onBack, onReset,
 }: PrivateStrategyViewProps) {
   const [selected, setSelected] = useState<PackageId | null>(null);
-  const [gapToClose] = useState(currentGap);
 
   const returnRate = expectedReturn / 100;
   const inflationRate = inflation / 100;
@@ -89,28 +90,35 @@ export function PrivateStrategyView({
   const yearsInRetirement = Math.max(1, lifeExpectancy - originalRetirementAge);
 
   // A: Private ETF — savings only
-  const rawA = requiredMonthlyPMT(gapToClose, returnRate, inflationRate, yearsToRetire, yearsInRetirement, SAFE_RATE);
+  const rawA = requiredMonthlyPMT(originalGap, returnRate, inflationRate, yearsToRetire, yearsInRetirement, SAFE_RATE);
   const extraA = Math.max(25, Math.ceil(rawA / 25) * 25);
 
   // B: bAV — same effect, lower net cost via tax leverage
-  const bavNetto = Math.max(10, Math.ceil(rawA / BAV_LEVERAGE / 10) * 10);
+  // N4: Math.round for consistency with leverBavNetto calculation in usePensionMath
+  const bavNetto = Math.max(10, Math.round(rawA / BAV_LEVERAGE / 10) * 10);
 
   // C: Kompromiss — 2 years delay + reduced savings
+  // Use Math.round (not ceil) so rawC and rawA in the same €25 band still show C as distinct option
   const canC = originalRetirementAge + DELAY_C <= MAX_AGE && yearsInRetirement - DELAY_C >= 1;
   const rawC = canC
-    ? requiredMonthlyPMT(gapToClose, returnRate, inflationRate, yearsToRetire + DELAY_C, yearsInRetirement - DELAY_C, SAFE_RATE)
+    ? requiredMonthlyPMT(originalGap, returnRate, inflationRate, yearsToRetire + DELAY_C, yearsInRetirement - DELAY_C, SAFE_RATE)
     : Infinity;
-  const extraC = canC ? Math.max(0, Math.ceil(rawC / 25) * 25) : Infinity;
-  const showC = canC && extraC >= 0 && extraC < extraA;
+  const extraC = canC ? Math.max(0, Math.round(rawC / 25) * 25) : Infinity;
+  const showC = canC && rawC < rawA; // compare raw PMT values — rounding can hide a real improvement
 
-  // D: Zeit — find minimum delay for 0 extra savings
+  // D: Find minimum delay to eliminate extra savings (PMT < €25).
+  // Fallback: use maximum feasible delay and show reduced savings if still beneficial.
+  const maxDelayD = MAX_AGE - originalRetirementAge;
   let delayD = 0;
-  for (let d = 1; d <= MAX_AGE - originalRetirementAge; d++) {
-    if (yearsInRetirement - d < 1) break;
-    const pmt = requiredMonthlyPMT(gapToClose, returnRate, inflationRate, yearsToRetire + d, yearsInRetirement - d, SAFE_RATE);
-    if (pmt < 25) { delayD = d; break; }
+  let rawD = Infinity;
+  for (let d = 1; d <= maxDelayD; d++) {
+    if (yearsInRetirement - d < 2) break;
+    const pmt = requiredMonthlyPMT(originalGap, returnRate, inflationRate, yearsToRetire + d, yearsInRetirement - d, SAFE_RATE);
+    if (pmt < 25) { delayD = d; rawD = pmt; break; }
+    if (d === maxDelayD) { delayD = d; rawD = pmt; } // best achievable delay
   }
-  const showD = delayD > 0;
+  const extraD = rawD < 25 ? 0 : Math.max(0, Math.round(rawD / 25) * 25);
+  const showD = delayD > 0 && extraD < extraA;
 
   const resetLevers = () => {
     setMonthlyContribution(originalContribution);
@@ -128,12 +136,13 @@ export function PrivateStrategyView({
     } else if (id === 'C') {
       setMonthlyContribution(originalContribution + extraC);
       setRetirementAge(originalRetirementAge + DELAY_C);
-    } else {
+    } else { // D
       setRetirementAge(originalRetirementAge + delayD);
+      if (extraD > 0) setMonthlyContribution(originalContribution + extraD);
     }
   };
 
-  if (gapToClose <= 0) {
+  if (originalGap <= 0) {
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
         <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 3</div>
@@ -182,8 +191,13 @@ export function PrivateStrategyView({
             selected={selected === 'B'}
             icon={<Building2 size={20} className={selected === 'B' ? 'text-emerald-600' : 'text-black'} />}
             badge="Der Steuer-Trick"
-            title={`Nur ${bavNetto} € netto in die bAV`}
-            subtitle="Steuervorteil macht's günstiger als privates Sparen."
+            // M4: show total bAV when an existing bAV contribution is already active
+            title={originalBavNetto > 0
+              ? `Gesamt ${originalBavNetto + bavNetto} € netto in die bAV`
+              : `Nur ${bavNetto} € netto in die bAV`}
+            subtitle={originalBavNetto > 0
+              ? `${bavNetto} € zusätzlich zum bestehenden ${originalBavNetto} € Beitrag.`
+              : "Steuervorteil macht's günstiger als privates Sparen."}
             onClick={() => applyPackage('B')}
           />
         )}
@@ -204,8 +218,12 @@ export function PrivateStrategyView({
             selected={selected === 'D'}
             icon={<Clock size={20} className={selected === 'D' ? 'text-emerald-600' : 'text-black'} />}
             badge="Der späte Ausstieg"
-            title={`${delayD} Jahre länger arbeiten`}
-            subtitle="Keine höhere Sparrate nötig."
+            title={extraD === 0
+              ? `${delayD} Jahre länger arbeiten`
+              : `${delayD} J. länger + ${extraD} € sparen`}
+            subtitle={extraD === 0
+              ? "Keine höhere Sparrate nötig."
+              : `Statt ${extraA} € nur ${extraD} € mehr sparen.`}
             onClick={() => applyPackage('D')}
           />
         )}
@@ -216,7 +234,7 @@ export function PrivateStrategyView({
         onClick={() => { onReset(); onNext(); }}
         className="text-[12px] text-gray-400 hover:text-gray-600 underline underline-offset-2 text-center mb-5 cursor-pointer transition-colors w-full"
       >
-        Nichts anpassen (Lücke von {gapToClose.toLocaleString('de-DE')} € akzeptieren)
+        Nichts anpassen (Lücke von {originalGap.toLocaleString('de-DE')} € akzeptieren)
       </button>
 
       <div className="mt-auto flex gap-3">
@@ -235,8 +253,8 @@ export function PrivateStrategyView({
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {selected ? 'Sparplan jetzt aktualisieren' : 'Paket wählen'}
-          {selected ? <CheckCircle2 size={18} /> : <ChevronRight size={18} />}
+          {selected ? 'Weiter' : 'Paket wählen'}
+          {selected ? <ChevronRight size={18} /> : <ChevronRight size={18} />}
         </button>
       </div>
     </div>

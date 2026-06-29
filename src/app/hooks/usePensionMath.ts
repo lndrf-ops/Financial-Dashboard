@@ -229,7 +229,7 @@ export function usePensionMath({
   // bAV lever — netto salary sacrifice: each € netto unlocks ~2.1 € brutto
   // (combined income-tax + social-contribution savings for a median earner)
   const leverBavNetto = currentGap === 0 ? 0
-    : Math.min(250, Math.max(10, Math.round(fullPMT * 0.5 / 2.1 / 10) * 10));
+    : Math.min(250, Math.max(10, Math.round(fullPMT * 0.5 / 1.9 / 10) * 10));
 
   // ── Output ────────────────────────────────────────────────────────────────
   return {

@@ -21,11 +21,11 @@ export interface AIOnboardingData {
   initialCapital: number;
   income: number;
   pensionAssets: PensionAsset[];
-  /** Always 0 — no speculative amounts are computed without actual DRV data. */
-  drvBonus: number;
-  employmentType: EmploymentType;
   /** True when user reported school/university time after age 17 (Anrechnungszeiten). */
+  drvBonusFound: boolean;
+  employmentType: EmploymentType;
   educationTimesFound: boolean;
+  feeling?: FeelingOption;
 }
 
 // ─── Component Props ───────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@ export function StepEducationCheck({ selectedBonusOption, onSelect, onOpenInfo }
         <OptionCard
           emoji={<GraduationCap size={20} />}
           title="Ja, habe ich"
-          subtitle="Wir prüfen auf eintragbare Anrechnungszeiten"
+          subtitle="Wir bereiten die Antragsformulare für dich vor"
           selected={selectedBonusOption === 'yes'}
           onClick={() => onSelect('yes')}
         />

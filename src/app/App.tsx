@@ -83,7 +83,8 @@ export default function App() {
   if (s.activeView === 'personalData') return <PersonalDataView onBack={() => s.setActiveView('profile')} />;
 
   if (s.activeView === 'optimize') {
-    const bavAlreadyExists = s.dynamicAssets.some(a => a.id === 'company' && a.payout > 0);
+    // N2: tie to actual user-controlled bAV contribution, not dynamicAssets (which includes VBL/Rürup)
+    const bavAlreadyExists = s.bavNettoVerzicht[0] > 0;
     return (
       <OptimizationPlan
         onBack={() => s.setActiveView('dashboard')}

@@ -39,14 +39,14 @@ export function useAppState() {
   const [targetPensionReal, setTargetPensionReal] = useState([2100]);
   const [vlActive, setVlActive] = useState(false);
   const [bavNettoVerzicht, setBavNettoVerzicht] = useState([0]);
-  const [drvBonus, setDrvBonus] = useState(0);
+  const [drvBonus, setDrvBonus] = useState(false);
   const [lifeEvents, setLifeEvents] = useState<LifeEvent[]>([]);
   const [stressTests, setStressTests] = useState<StressTests>({ bearMarket: false, highInflation: false, longevity: false });
   const [dynamicAssets, setDynamicAssets] = useState<Asset[]>(DEFAULT_ASSETS);
   const [avdActive, setAvdActive] = useState(false);
   const [avdMonthlyContribution, setAvdMonthlyContribution] = useState([50]);
 
-  const bavBruttoInvest = Math.round(bavNettoVerzicht[0] * 2.1);
+  const bavBruttoInvest = Math.round(bavNettoVerzicht[0] * 1.9);
 
   const triggerNotification = (msg: string) => {
     setNotification(msg);
@@ -55,7 +55,7 @@ export function useAppState() {
 
   const handleAIOnboardingComplete = (data: AIOnboardingData) => {
     setUserName('Lena');
-    setDrvBonus(data.drvBonus);
+    setDrvBonus(data.drvBonusFound);
     setCurrentAge(data.age);
     setRetirementAge([67]);
     setMonthlyContribution([data.monthlySavings]);
@@ -68,6 +68,8 @@ export function useAppState() {
     const etfStart  = Math.round(data.initialCapital * 0.8);
     const cashStart = data.initialCapital - etfStart;
     const drvPayout = data.pensionAssets.find(a => a.type === 'drv')?.monthlyPayout ?? 0;
+    const bavPayout = data.pensionAssets.filter(a => a.type === 'bAV').reduce((s, a) => s + a.monthlyPayout, 0);
+    const hasRiester = data.pensionAssets.some(a => a.type === 'riester');
     const otherPayout = data.pensionAssets.filter(a => a.type !== 'drv').reduce((s, a) => s + a.monthlyPayout, 0);
 
     let companyAsset: Asset;
@@ -80,8 +82,16 @@ export function useAppState() {
       companyAsset = { id: "company", name: "Rürup-Rente", subtitle: "Steuerlich gefördert (§ 10 EStG)", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Angespartes Kapital", accumulatedValue: otherPayout > 0 ? otherPayout * 120 : 0 };
       setVlActive(false);
     } else {
-      companyAsset = { id: "company", name: "Betriebliche Rente", subtitle: "bAV & VL verfügbar", icon: Briefcase, payout: otherPayout, accumulatedLabel: "Kapital", accumulatedValue: otherPayout > 0 ? 15000 : 0 };
-      setVlActive(true);
+      const companyName = bavPayout > 0 && hasRiester ? "bAV & Riester"
+        : bavPayout > 0 ? "Betriebliche Rente"
+        : hasRiester ? "Riester-Rente"
+        : "Betriebliche Rente";
+      const companySubtitle = bavPayout > 0 && hasRiester ? "Entgeltumwandlung & Riester-Vertrag"
+        : bavPayout > 0 ? "Entgeltumwandlung"
+        : hasRiester ? "Staatl. geförderter Sparplan"
+        : "bAV & VL verfügbar";
+      companyAsset = { id: "company", name: companyName, subtitle: companySubtitle, icon: Briefcase, payout: otherPayout, accumulatedLabel: "Kapital", accumulatedValue: bavPayout > 0 ? Math.round(bavPayout * 80) : 0 };
+      setVlActive(false);
     }
 
     setDynamicAssets([
@@ -93,6 +103,11 @@ export function useAppState() {
       { id: "crypto",     name: "Kryptowährungen",     subtitle: "Bitcoin & Altcoins",        icon: Bitcoin,    payout: 0,         accumulatedLabel: "Wallet",         accumulatedValue: 0 },
       { id: "avd",        name: "Altersvorsorgedepot", subtitle: "Staatl. gefördert (ab 2027)", icon: Wallet,  payout: 0,         accumulatedLabel: "Depotwert",      accumulatedValue: 0 },
     ]);
+    if (data.feeling === 'worried') {
+      triggerNotification('Keine Sorge — wir haben deinen persönlichen Plan berechnet.');
+    } else if (data.feeling === 'relaxed') {
+      triggerNotification('Super Einstellung! Hier ist dein persönlicher Rentenplan.');
+    }
     setActiveView('dashboard');
   };
 

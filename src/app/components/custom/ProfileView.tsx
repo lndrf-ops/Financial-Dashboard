@@ -187,13 +187,13 @@ export function ProfileView(props: ProfileViewProps) {
         </div>{/* tutorial-profile-account */}
 
         {showAntraege && (
-          <CollapsibleSection title="Anträge & HR" defaultOpen={false}>
+          <CollapsibleSection title="Anträge" defaultOpen={false}>
             <AntraegSection vlActive={props.vlActive} bavNetto={props.bavNetto} />
           </CollapsibleSection>
         )}
 
         <div id="tutorial-profile-datasync">
-        <CollapsibleSection title="Daten-Sync" defaultOpen={false}>
+        <CollapsibleSection title="Dokumenten importieren" defaultOpen={false}>
           <div className="mt-4">
             <div
               onClick={() => setShowSync(true)}
