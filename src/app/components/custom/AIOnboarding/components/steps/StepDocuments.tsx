@@ -45,7 +45,7 @@ export function StepDocuments({ dropState, processingStep, docSelected, importMe
         </p>
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-5">
           <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 shrink-0">Demo</span>
-          <span className="text-[11px] text-amber-700 leading-tight">Beispieldaten — in der fertigen App werden deine echten Dokumente aus der TR-Ablage ausgelesen.</span>
+          <span className="text-[11px] text-amber-700 leading-tight">Da ihr vermutlich keine Rentenbescheide dabei habt, sind diese Dokumente für die Demo vorab hochgeladen.</span>
         </div>
         <div className="space-y-3">
           {MOCK_DETECTED.map((asset, idx) => {
@@ -97,7 +97,7 @@ export function StepDocuments({ dropState, processingStep, docSelected, importMe
       </p>
       <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
         <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 shrink-0">Demo</span>
-        <span className="text-[11px] text-amber-700 leading-tight">Beispieldaten — in der fertigen App werden deine echten TR-Dokumente automatisch ausgelesen.</span>
+        <span className="text-[11px] text-amber-700 leading-tight">Da ihr vermutlich keine Rentenbescheide dabei habt, sind diese Dokumente für die Demo vorab hochgeladen.</span>
       </div>
 
       <button

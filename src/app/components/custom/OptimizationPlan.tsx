@@ -32,9 +32,8 @@ export function OptimizationPlan({
   const [bavCardState, setBavCardState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [hrEmail, setHrEmail] = useState('');
 
-  // Pre-fill based on existing state so the user sees their current setup (M3)
-  const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(vlActive ? 'yes' : null);
-  const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(bavNettoVerzicht[0] > 0 ? 'yes' : null);
+  const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(null);
+  const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(null);
 
   const [formDownloaded, setFormDownloaded] = useState(false);
 
@@ -138,24 +137,26 @@ export function OptimizationPlan({
   const OptionCard = ({ emoji, title, subtitle, onClick, active = false, disabled = false, highlight = false }: any) => (
     <button
       onClick={onClick} disabled={disabled}
-      className={`w-full p-5 rounded-2xl flex items-center justify-between transition-all text-left group border ${
+      className={`w-full p-5 rounded-2xl flex items-center justify-between transition-all text-left group border-2 ${
         active
-          ? 'bg-black/[0.04] border-black'
+          ? 'border-emerald-400 bg-emerald-50'
           : highlight
             ? 'bg-black hover:bg-gray-900 border-black'
-            : 'bg-[#F9FAFB] border-gray-200 hover:border-gray-400 hover:bg-gray-100'
+            : 'bg-[#F9FAFB] border-gray-200 hover:border-gray-300 hover:bg-white'
       } ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <div className="flex items-center gap-4">
-        <div className="flex items-center justify-center w-8 h-8">{emoji}</div>
+        <div className={`flex items-center justify-center w-8 h-8 rounded-xl transition-colors duration-200 ${
+          active ? 'text-emerald-600' : highlight ? 'text-white' : 'text-black'
+        }`}>{emoji}</div>
         <div>
-          <h3 className={`font-bold text-[15px] ${highlight && !active ? 'text-white' : 'text-black'}`}>{title}</h3>
-          {subtitle && <p className={`text-[12px] mt-0.5 ${highlight && !active ? 'text-gray-300' : 'text-gray-500'}`}>{subtitle}</p>}
+          <h3 className={`font-bold text-[15px] ${active ? 'text-emerald-800' : highlight ? 'text-white' : 'text-black'}`}>{title}</h3>
+          {subtitle && <p className={`text-[12px] mt-0.5 ${active ? 'text-emerald-600' : highlight ? 'text-gray-300' : 'text-gray-500'}`}>{subtitle}</p>}
         </div>
       </div>
       {active
-        ? <CheckCircle2 size={20} className="text-black" />
-        : <ChevronRight size={18} className={highlight && !active ? 'text-white' : 'text-gray-300 group-hover:text-gray-600'} />
+        ? <CheckCircle2 size={20} className="text-emerald-500" />
+        : <ChevronRight size={18} className={highlight ? 'text-white' : 'text-gray-300 group-hover:text-gray-600'} />
       }
     </button>
   );
@@ -592,7 +593,7 @@ export function OptimizationPlan({
             </div>
 
             {/* L3/N1: back mirrors the forward navigation from step 4 to avoid empty pages */}
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto pt-6 border-t border-gray-100">
               <button
                 onClick={() => {
                   if (vlActive || bavNettoVerzicht[0] > 0) setStep(6);
