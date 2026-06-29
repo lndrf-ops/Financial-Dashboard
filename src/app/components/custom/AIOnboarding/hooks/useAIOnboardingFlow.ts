@@ -102,7 +102,7 @@ export function useAIOnboardingFlow(
     if (step !== 1) return;
     const t1 = setTimeout(() => setSyncStep(1), 800);
     const t2 = setTimeout(() => setSyncStep(2), 1700);
-    const t3 = setTimeout(() => setStep(2), 2800);
+    const t3 = setTimeout(() => setStep(2), 4500);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [step]);
 

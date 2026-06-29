@@ -103,11 +103,6 @@ export function useAppState() {
       { id: "crypto",     name: "Kryptowährungen",     subtitle: "Bitcoin & Altcoins",        icon: Bitcoin,    payout: 0,         accumulatedLabel: "Wallet",         accumulatedValue: 0 },
       { id: "avd",        name: "Altersvorsorgedepot", subtitle: "Staatl. gefördert (ab 2027)", icon: Wallet,  payout: 0,         accumulatedLabel: "Depotwert",      accumulatedValue: 0 },
     ]);
-    if (data.feeling === 'worried') {
-      triggerNotification('Keine Sorge — wir haben deinen persönlichen Plan berechnet.');
-    } else if (data.feeling === 'relaxed') {
-      triggerNotification('Super Einstellung! Hier ist dein persönlicher Rentenplan.');
-    }
     setActiveView('dashboard');
   };
 

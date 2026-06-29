@@ -193,7 +193,7 @@ export function ProfileView(props: ProfileViewProps) {
         )}
 
         <div id="tutorial-profile-datasync">
-        <CollapsibleSection title="Dokumenten importieren" defaultOpen={false}>
+        <CollapsibleSection title="Dokumente importieren" defaultOpen={false}>
           <div className="mt-4">
             <div
               onClick={() => setShowSync(true)}

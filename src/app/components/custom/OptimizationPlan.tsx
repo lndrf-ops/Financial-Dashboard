@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, AlertTriangle, CheckCircle2, Briefcase, Landmark, ChevronRight, Send, Loader2, X, ArrowRight, Info, Download, FileCheck } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, Briefcase, Landmark, ChevronRight, X, ArrowRight, Info, Download, FileCheck } from "lucide-react";
 import { PrivateStrategyView } from "./PrivateStrategyView";
 import { InfoTooltip } from "./InfoTooltip";
 
@@ -28,10 +28,6 @@ export function OptimizationPlan({
   currentAge, lifeExpectancy, inflation,
 }: OptimizationPlanProps) {
   const [step, setStep] = useState(1);
-  const [vlCardState, setVlCardState] = useState<'idle' | 'sending' | 'sent'>('idle');
-  const [bavCardState, setBavCardState] = useState<'idle' | 'sending' | 'sent'>('idle');
-  const [hrEmail, setHrEmail] = useState('');
-
   const [selectedVL, setSelectedVL] = useState<'yes' | 'no' | null>(null);
   const [selectedBAV, setSelectedBAV] = useState<'yes' | 'no' | null>(null);
 
@@ -51,11 +47,6 @@ export function OptimizationPlan({
     }
   }, [step, step4EntryGap, currentGap]);
 
-  // Snapshot of perfectBavNetto at the moment the user first selects bAV.
-  // Prevents the feedback loop: applying bAV shrinks the gap → perfectBavNetto recalculates
-  // smaller → a second click would apply a different (wrong) amount.
-  const [lockedBavNetto, setLockedBavNetto] = useState<number | null>(null);
-
   const [initialGap] = useState(currentGap);
   const [originalContribution] = useState(monthlyContribution);
   const [originalRetirementAge] = useState(retirementAge);
@@ -68,6 +59,18 @@ export function OptimizationPlan({
   const perfectBavNetto =
     suggestedBavNettoAmount ??
     (currentGap === 0 ? 0 : Math.min(250, Math.max(10, Math.ceil((currentGap * 0.4 / 1.9) / 10) * 10)));
+
+  // Snapshot of perfectBavNetto taken when step 3 is first entered.
+  // Frozen here so the card shows identical text before and after clicking,
+  // and prevents the feedback loop: applying bAV shrinks the gap → perfectBavNetto
+  // recalculates smaller → a second click would apply a different (wrong) amount.
+  const [lockedBavNetto, setLockedBavNetto] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (step === 3 && lockedBavNetto === null) {
+      setLockedBavNetto(perfectBavNetto);
+    }
+  }, [step, lockedBavNetto, perfectBavNetto]);
 
   // Display and apply the locked snapshot; fall back to live value before first selection.
   const displayBavNetto = lockedBavNetto ?? perfectBavNetto;
@@ -113,25 +116,16 @@ export function OptimizationPlan({
 
   const handleBack = () => {
     if (step === 1) onBack();
-    else if (step === 6 && !drvBonus) setStep(4);
-    else setStep(prev => prev - 1);
+    else {
+      if (step === 3) setLockedBavNetto(null);
+      setStep(prev => prev - 1);
+    }
   };
 
   const handleStep4Reset = () => {
     setMonthlyContribution(originalContribution);
     setRetirementAge(originalRetirementAge);
     setBavNettoVerzicht([step4BaseBavNetto]);
-  };
-
-  // H3: mock send — UI labels are honest about the simulated nature
-  const handleSendCard = (type: 'vl' | 'bav') => {
-    if (type === 'vl') {
-      setVlCardState('sending');
-      setTimeout(() => setVlCardState('sent'), 1800);
-    } else {
-      setBavCardState('sending');
-      setTimeout(() => setBavCardState('sent'), 1800);
-    }
   };
 
   const OptionCard = ({ emoji, title, subtitle, onClick, active = false, disabled = false, highlight = false }: any) => (
@@ -147,11 +141,11 @@ export function OptimizationPlan({
     >
       <div className="flex items-center gap-4">
         <div className={`flex items-center justify-center w-8 h-8 rounded-xl transition-colors duration-200 ${
-          active ? 'text-emerald-600' : highlight ? 'text-white' : 'text-black'
+          highlight ? 'text-white' : 'text-black'
         }`}>{emoji}</div>
         <div>
-          <h3 className={`font-bold text-[15px] ${active ? 'text-emerald-800' : highlight ? 'text-white' : 'text-black'}`}>{title}</h3>
-          {subtitle && <p className={`text-[12px] mt-0.5 ${active ? 'text-emerald-600' : highlight ? 'text-gray-300' : 'text-gray-500'}`}>{subtitle}</p>}
+          <h3 className={`font-bold text-[15px] ${highlight ? 'text-white' : 'text-black'}`}>{title}</h3>
+          {subtitle && <p className={`text-[12px] mt-0.5 ${highlight ? 'text-gray-300' : 'text-gray-500'}`}>{subtitle}</p>}
         </div>
       </div>
       {active
@@ -261,7 +255,7 @@ export function OptimizationPlan({
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
             <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schritt 2</div>
             <h1 className="text-2xl font-black text-black mb-3 leading-tight">
-              {bavAlreadyExists ? 'Beitrag erhöhen.' : 'Die Brutto-Netto-Magie.'}
+              {bavAlreadyExists ? 'Beitrag erhöhen.' : 'Beitrag erhöhen.'}
             </h1>
             <p className="text-sm text-gray-500 mb-6 leading-relaxed">
               {bavAlreadyExists ? (
@@ -287,16 +281,12 @@ export function OptimizationPlan({
             <div className="space-y-3">
               <OptionCard
                 emoji={<Briefcase size={20} className="text-black" />}
-                title={bavAlreadyExists ? `Beitrag erhöhen (${displayBavNetto} € Netto)` : `bAV nutzen (${displayBavNetto} € Netto)`}
-                subtitle={`Fließt als ${Math.round(displayBavNetto * 1.9)} € in deinen Vertrag`}
+                title="Beitrag erhöhen"
+                subtitle={`${displayBavNetto} € Netto · fließen als ${Math.round(displayBavNetto * 1.9)} € Brutto in deinen Vertrag`}
                 active={selectedBAV === 'yes'}
                 onClick={() => {
-                  // Only snap + apply on the first selection to prevent the feedback loop
-                  // where applying bAV shrinks the gap → perfectBavNetto recalculates smaller.
                   if (selectedBAV !== 'yes') {
-                    const snap = perfectBavNetto;
-                    setLockedBavNetto(snap);
-                    setBavNettoVerzicht([snap]);
+                    setBavNettoVerzicht([lockedBavNetto ?? perfectBavNetto]);
                   }
                   setSelectedBAV('yes');
                 }}
@@ -306,7 +296,7 @@ export function OptimizationPlan({
                 title="Überspringen"
                 subtitle="Ich regle das lieber privat"
                 active={selectedBAV === 'no'}
-                onClick={() => { setSelectedBAV('no'); setLockedBavNetto(null); setBavNettoVerzicht([initialBavNetto]); }}
+                onClick={() => { setSelectedBAV('no'); setBavNettoVerzicht([initialBavNetto]); }}
               />
             </div>
             <BottomNav onBack={handleBack} onNext={handleNext} nextDisabled={!selectedBAV} nextLabel="Weiter" nextIcon={<ChevronRight size={18} />} />
@@ -329,7 +319,6 @@ export function OptimizationPlan({
             setBavNettoVerzicht={setBavNettoVerzicht}
             onNext={() => {
               if (drvBonus) setStep(5);
-              else if (vlActive || bavNettoVerzicht[0] > 0) setStep(6);
               else setStep(7);
             }}
             onBack={handleBack}
@@ -396,144 +385,8 @@ export function OptimizationPlan({
 
             <BottomNav
               onBack={handleBack}
-              onNext={() => { vlActive || bavNettoVerzicht[0] > 0 ? setStep(6) : setStep(7); }}
-              nextLabel={formDownloaded ? "Weiter" : "Überspringen"}
-              nextIcon={<ChevronRight size={18} />}
-            />
-          </div>
-        )}
-
-        {step === 6 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col flex-1">
-            <h1 className="text-2xl font-black text-black mb-2 leading-tight">Wir übernehmen die Bürokratie.</h1>
-            {/* M5: singular/plural based on how many applications */}
-            <p className="text-sm text-gray-500 mb-4 leading-relaxed">
-              Wir haben {vlActive && bavNettoVerzicht[0] > 0 ? 'die Anträge' : 'den Antrag'} bereits für dich vorbereitet. Du entscheidest, ob wir {vlActive && bavNettoVerzicht[0] > 0 ? 'sie' : 'ihn'} direkt an deine Personalabteilung senden sollen.
-            </p>
-
-            <div className="mb-5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
-                HR-E-Mail deines Arbeitgebers
-              </label>
-              <input
-                type="email"
-                value={hrEmail}
-                onChange={e => setHrEmail(e.target.value)}
-                placeholder="z.B. personal@meinunternehmen.de"
-                className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-[#F9FAFB] text-base text-black placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
-              />
-            </div>
-
-            <div className="space-y-4 mb-6">
-
-              {vlActive && (
-                vlCardState === 'sent' ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-center gap-4 animate-in zoom-in-95 duration-300">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                      <CheckCircle2 size={22} className="text-emerald-600" />
-                    </div>
-                    <div>
-                      {/* H3: honest mock label */}
-                      <p className="font-black text-[15px] text-emerald-700 leading-tight">Als gesendet markiert</p>
-                      <p className="text-[12px] text-emerald-600 mt-0.5">An: {hrEmail || 'deine Personalabteilung'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-[#F9FAFB] border border-gray-200 rounded-2xl p-5">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center shrink-0">
-                        <FileCheck size={22} className="text-black" />
-                      </div>
-                      <div>
-                        <p className="font-black text-[15px] text-black leading-tight">Antrag auf VL-Sparen</p>
-                        <p className="text-[12px] text-gray-500 mt-0.5">{hrEmail || 'Deine Personalabteilung'} · Kostenlos</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-5">
-                      <div className="flex items-center gap-2 text-[13px] text-gray-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                        <span>Antragsvorlage mit deinen Daten erstellt</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[13px] text-gray-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                        <span>AG zahlt bis zu 40 € monatlich dazu</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[13px] text-gray-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                        <span>Bearbeitungszeit: 2–4 Wochen</span>
-                      </div>
-                    </div>
-                    {/* H3: honest mock label */}
-                    <button
-                      onClick={() => handleSendCard('vl')}
-                      disabled={vlCardState === 'sending'}
-                      className="w-full h-12 bg-black hover:bg-gray-900 disabled:opacity-50 text-white font-bold text-[14px] rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                    >
-                      {vlCardState === 'sending'
-                        ? <><Loader2 size={16} className="animate-spin" /> Wird markiert…</>
-                        : <><Send size={16} /> Als gesendet markieren</>}
-                    </button>
-                  </div>
-                )
-              )}
-
-              {bavNettoVerzicht[0] > 0 && (
-                bavCardState === 'sent' ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-center gap-4 animate-in zoom-in-95 duration-300">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                      <CheckCircle2 size={22} className="text-emerald-600" />
-                    </div>
-                    <div>
-                      {/* H3: honest mock label */}
-                      <p className="font-black text-[15px] text-emerald-700 leading-tight">Als gesendet markiert</p>
-                      <p className="text-[12px] text-emerald-600 mt-0.5">An: {hrEmail || 'deine Personalabteilung'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-[#F9FAFB] border border-gray-200 rounded-2xl p-5">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center shrink-0">
-                        <FileCheck size={22} className="text-black" />
-                      </div>
-                      <div>
-                        <p className="font-black text-[15px] text-black leading-tight">Antrag auf Entgeltumwandlung</p>
-                        <p className="text-[12px] text-gray-500 mt-0.5">{hrEmail || 'Deine Personalabteilung'} · {bavNettoVerzicht[0]} € netto</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-5">
-                      <div className="flex items-center gap-2 text-[13px] text-gray-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                        <span>Antragsvorlage mit deinen Daten erstellt</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[13px] text-gray-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                        <span>Steuervorteile ab dem nächsten Gehalt</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[13px] text-gray-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                        <span>Bearbeitungszeit: 2–4 Wochen</span>
-                      </div>
-                    </div>
-                    {/* H3: honest mock label */}
-                    <button
-                      onClick={() => handleSendCard('bav')}
-                      disabled={bavCardState === 'sending'}
-                      className="w-full h-12 bg-black hover:bg-gray-900 disabled:opacity-50 text-white font-bold text-[14px] rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                    >
-                      {bavCardState === 'sending'
-                        ? <><Loader2 size={16} className="animate-spin" /> Wird markiert…</>
-                        : <><Send size={16} /> Als gesendet markieren</>}
-                    </button>
-                  </div>
-                )
-              )}
-
-            </div>
-
-            <BottomNav
-              onBack={handleBack}
               onNext={() => setStep(7)}
-              nextLabel="Abschließen"
+              nextLabel={formDownloaded ? "Weiter" : "Überspringen"}
               nextIcon={<ChevronRight size={18} />}
             />
           </div>
@@ -547,15 +400,7 @@ export function OptimizationPlan({
               </div>
               <h1 className="text-3xl font-black text-black mb-2">Aktionsplan gesetzt.</h1>
               <p className="text-sm text-gray-500 text-center px-2 leading-relaxed">
-                {(() => {
-                  const sent = [
-                    vlCardState === 'sent' && "VL-Sparen",
-                    bavCardState === 'sent' && `Entgeltumwandlung (${bavNettoVerzicht[0]} €)`,
-                  ].filter(Boolean).join(" & ");
-                  return sent
-                    ? `${sent} als gesendet markiert. Reiche die Anträge manuell bei deiner Personalabteilung ein.`
-                    : "Dein Plan ist gespeichert. Anträge kannst du jederzeit manuell einreichen.";
-                })()}
+                Dein Plan ist gespeichert. Das Dashboard zeigt jetzt deinen aktualisierten Rentenausblick.
               </p>
             </div>
 
@@ -566,40 +411,16 @@ export function OptimizationPlan({
                   <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">Jetzt</span>
                   <span className="text-[13px] text-gray-700 leading-snug">Dashboard zeigt deinen aktualisierten Rentenplan</span>
                 </div>
-                {vlCardState === 'sent' && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">2–4 Wo.</span>
-                    <span className="text-[13px] text-gray-700 leading-snug">HR richtet VL-Sparen ein — bis zu 40 € / Monat vom Arbeitgeber</span>
-                  </div>
-                )}
-                {bavCardState === 'sent' && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">2–4 Wo.</span>
-                    <span className="text-[13px] text-gray-700 leading-snug">Entgeltumwandlung startet mit dem nächsten Gehaltseingang</span>
-                  </div>
-                )}
-                {((vlActive && vlCardState !== 'sent') || (bavNettoVerzicht[0] > 0 && bavCardState !== 'sent')) && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-[10px] font-black text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">Offen</span>
-                    <span className="text-[13px] text-gray-700 leading-snug">
-                      {[
-                        vlActive && vlCardState !== 'sent' && 'VL-Sparen',
-                        bavNettoVerzicht[0] > 0 && bavCardState !== 'sent' && `Entgeltumwandlung (${bavNettoVerzicht[0]} €)`,
-                      ].filter(Boolean).join(' & ')} — Antrag manuell an deine Personalabteilung senden
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-start gap-3">
+                  <span className="text-[10px] font-black text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 shrink-0 mt-0.5">Später</span>
+                  <span className="text-[13px] text-gray-700 leading-snug">Im Dashboard Sparplan und Rentenalter jederzeit anpassen</span>
+                </div>
               </div>
             </div>
 
-            {/* L3/N1: back mirrors the forward navigation from step 4 to avoid empty pages */}
             <div className="flex gap-3 mt-auto pt-6 border-t border-gray-100">
               <button
-                onClick={() => {
-                  if (vlActive || bavNettoVerzicht[0] > 0) setStep(6);
-                  else if (drvBonus) setStep(5);
-                  else setStep(4);
-                }}
+                onClick={() => drvBonus ? setStep(5) : setStep(4)}
                 className="flex-none w-14 h-14 bg-[#F4F4F5] border border-gray-200 hover:bg-gray-200 text-black rounded-xl transition-colors cursor-pointer flex items-center justify-center"
               >
                 <ArrowLeft size={20} />
